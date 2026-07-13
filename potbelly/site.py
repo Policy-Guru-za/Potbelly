@@ -90,7 +90,7 @@ def head(*, title: str, description: str, canonical: str, site: str,
 <meta name="twitter:card" content="summary">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/site.css">
-<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
 {json_ld}
 </head>
@@ -98,8 +98,8 @@ def head(*, title: str, description: str, canonical: str, site: str,
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="app-header"><div class="wrap">
   <a class="brand" href="/" aria-label="Potbelly home">
-    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32"><path fill="currentColor" d="M8 12h16l-1 12H9L8 12Zm2-5h12v3H10V7Zm4-4h4v3h-4V3ZM6 13H3v5h3v-2H5v-1h1v-2Zm20 0h3v5h-3v-2h1v-1h-1v-2Z"/></svg></span>
-    <span><span class="brand-name">Potbelly</span><span class="brand-tagline">Pressure cooking, beautifully clear.</span></span>
+    <span class="brand-mark" aria-hidden="true"><img src="/icons/chef-mark.png" alt="" width="192" height="192"></span>
+    <span><span class="brand-name">Potbelly</span><span class="brand-tagline">Pot Luck with Laupie</span></span>
   </a>
   <div class="header-actions">
     <span class="status-pill" id="networkStatus" data-state="online">Online</span>

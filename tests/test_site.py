@@ -26,6 +26,13 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertNotIn("const DATA", page)
         self.assertNotIn("fonts.googleapis.com", page)
 
+    def test_brand_uses_chef_mascot_and_new_strapline(self):
+        page = index_page([self.recipe], "https://potbelly.example")
+        self.assertIn('src="/icons/chef-mark.png"', page)
+        self.assertIn("Pot Luck with Laupie", page)
+        self.assertIn('rel="icon" href="/icons/icon-192.png"', page)
+        self.assertNotIn("Pressure cooking, beautifully clear.", page)
+
     def test_recipe_page_contains_canonical_and_recipe_json_ld(self):
         page = recipe_page(self.recipe, "https://potbelly.example")
         self.assertIn('rel="canonical" href="https://potbelly.example/recipe/instant-pot-stew"', page)
