@@ -28,6 +28,10 @@ function progressRecoveryKey(recipeSlug: string): string {
   return `potbelly-progress-recovery:${recipeSlug}`;
 }
 
+function serializedProgress(progress: CookingProgress): string {
+  return JSON.stringify(progress);
+}
+
 function recoveryProgress(recipeSlug: string): CookingProgress | null {
   try {
     const value: unknown = JSON.parse(localStorage.getItem(progressRecoveryKey(recipeSlug)) ?? "null");
@@ -44,17 +48,27 @@ function recoveryProgress(recipeSlug: string): CookingProgress | null {
 export async function loadProgress(recipeSlug: string): Promise<CookingProgress | null> {
   const saved = await (await database).get("progress", recipeSlug) ?? null;
   const recovery = recoveryProgress(recipeSlug);
-  if (!recovery || (saved && saved.updatedAt >= recovery.updatedAt)) return saved;
+  if (!recovery) return saved;
+  if (saved && saved.updatedAt > recovery.updatedAt) return saved;
+  if (saved && serializedProgress(saved) === serializedProgress(recovery)) return saved;
   void saveProgress(recovery);
   return recovery;
 }
 
-export async function saveProgress(progress: CookingProgress): Promise<void> {
+export function stageProgressRecovery(progress: CookingProgress): CookingProgress {
   const snapshot = structuredClone(progress);
+  localStorage.setItem(progressRecoveryKey(snapshot.recipeSlug), serializedProgress(snapshot));
+  return snapshot;
+}
+
+export async function commitProgress(snapshot: CookingProgress): Promise<void> {
   const key = progressRecoveryKey(snapshot.recipeSlug);
-  localStorage.setItem(key, JSON.stringify(snapshot));
   await (await database).put("progress", snapshot, snapshot.recipeSlug);
-  if (recoveryProgress(snapshot.recipeSlug)?.updatedAt === snapshot.updatedAt) localStorage.removeItem(key);
+  if (localStorage.getItem(key) === serializedProgress(snapshot)) localStorage.removeItem(key);
+}
+
+export async function saveProgress(progress: CookingProgress): Promise<void> {
+  await commitProgress(stageProgressRecovery(progress));
 }
 
 export async function resetProgress(recipeSlug: string): Promise<void> {

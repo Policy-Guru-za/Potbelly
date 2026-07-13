@@ -13,21 +13,28 @@ async function start(): Promise<void> {
   const cooking = new CookingController(slug);
   await cooking.initialise();
   let assistant: import("./ai-assistant").AiAssistant | null = null;
+  const showOfflineAssistant = (): void => {
+    const dialog = requiredElement<HTMLDialogElement>("#aiDialog");
+    document.querySelectorAll<HTMLElement>("[data-ai-stage]").forEach((element) => {
+      element.hidden = element.dataset.aiStage !== "offline";
+    });
+    dialog.showModal();
+  };
   requiredElement<HTMLButtonElement>("#askPotbelly").addEventListener("click", async () => {
     if (!navigator.onLine) {
-      const dialog = requiredElement<HTMLDialogElement>("#aiDialog");
-      document.querySelectorAll<HTMLElement>("[data-ai-stage]").forEach((element) => {
-        element.hidden = element.dataset.aiStage !== "offline";
-      });
-      dialog.showModal();
+      showOfflineAssistant();
       return;
     }
-    if (!assistant) {
-      const { AiAssistant } = await import("./ai-assistant");
-      assistant = new AiAssistant(cooking);
-      assistant.initialise();
+    try {
+      if (!assistant) {
+        const { AiAssistant } = await import("./ai-assistant");
+        assistant = new AiAssistant(cooking);
+        assistant.initialise();
+      }
+      await assistant.open();
+    } catch {
+      showOfflineAssistant();
     }
-    await assistant.open();
   });
 }
 

@@ -28,6 +28,7 @@ class AtomicBuildTests(unittest.TestCase):
             self.assertEqual(report["recipes"], 1)
             self.assertFalse((output / "recipe" / "stale.html").exists())
             self.assertTrue((output / "recipe" / "instant-pot-stew.html").exists())
+            self.assertIn("no-transform", (output / "_headers").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

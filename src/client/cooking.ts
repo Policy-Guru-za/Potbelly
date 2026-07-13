@@ -1,5 +1,5 @@
 import type { CookingProgress } from "../domain/types";
-import { loadProgress, resetProgress, saveProgress } from "../services/db";
+import { commitProgress, loadProgress, resetProgress, stageProgressRecovery } from "../services/db";
 import { requiredElement, setLiveMessage } from "../services/dom";
 
 interface Snapshot {
@@ -14,6 +14,7 @@ export class CookingController extends EventTarget {
   private readonly steps: HTMLElement[];
   private progress: CookingProgress;
   private history: Snapshot[] = [];
+  private persistQueue: Promise<void> = Promise.resolve();
 
   constructor(recipeSlug: string) {
     super();
@@ -140,7 +141,9 @@ export class CookingController extends EventTarget {
   }
 
   private async persist(): Promise<void> {
-    await saveProgress(this.progress);
+    const snapshot = stageProgressRecovery(this.progress);
+    this.persistQueue = this.persistQueue.catch(() => undefined).then(() => commitProgress(snapshot));
+    await this.persistQueue;
   }
 
   private render(): void {
