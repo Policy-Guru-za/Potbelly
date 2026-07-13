@@ -4,6 +4,12 @@ const AxeBuilder = require("@axe-core/playwright").default;
 test("search supports natural intent and preserves stable routes", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/Potbelly/);
+  const desktopBrand = await page.evaluate(() => ({
+    mark: document.querySelector(".brand-mark").getBoundingClientRect().width,
+    name: Number.parseFloat(getComputedStyle(document.querySelector(".brand-name")).fontSize),
+  }));
+  expect(desktopBrand.mark).toBeCloseTo(76.8, 1);
+  expect(desktopBrand.name).toBeCloseTo(38.4, 1);
   const headerGap = await page.evaluate(() => {
     const brand = document.querySelector(".brand").getBoundingClientRect();
     const kicker = document.querySelector(".hero-kicker").getBoundingClientRect();
@@ -56,6 +62,14 @@ test("mobile controls, keyboard focus, recipe, and PDF remain usable", async ({ 
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/");
   await expect(page.getByLabel("What do you want to cook?")).toBeEnabled();
+  const mobileBrand = await page.evaluate(() => ({
+    mark: document.querySelector(".brand-mark").getBoundingClientRect().width,
+    name: Number.parseFloat(getComputedStyle(document.querySelector(".brand-name")).fontSize),
+    overflow: document.documentElement.scrollWidth > innerWidth,
+  }));
+  expect(mobileBrand.mark).toBeCloseTo(76.8, 1);
+  expect(mobileBrand.name).toBeCloseTo(38.4, 1);
+  expect(mobileBrand.overflow).toBeFalsy();
   await page.getByLabel("What do you want to cook?").focus();
   await expect(page.locator("#q")).toBeFocused();
   const mobileHeaderGap = await page.evaluate(() => {
