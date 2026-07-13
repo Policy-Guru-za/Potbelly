@@ -27,6 +27,7 @@ ASSETS = ROOT / "assets"
 FONTS = ROOT / "fonts"
 WEB_ASSETS = ROOT / ".web-assets" / "assets"
 STATIC = ROOT / "static"
+STABLE_WEB_ASSETS = ("app.js", "info.js", "recipe.js", "site.css")
 
 
 def write_text(path: Path, value: str) -> None:
@@ -44,6 +45,29 @@ def validate_inputs() -> None:
         raise FileNotFoundError("missing build assets: " + ", ".join(missing))
 
 
+def web_asset_references(asset_directory: Path) -> dict[str, str]:
+    references: dict[str, str] = {}
+    for stable_name in STABLE_WEB_ASSETS:
+        stem, suffix = stable_name.rsplit(".", 1)
+        hashed = sorted(asset_directory.glob(f"{stem}-*.{suffix}"))
+        if len(hashed) > 1:
+            raise RuntimeError(f"ambiguous generated assets for {stable_name}: {hashed}")
+        resolved = hashed[0].name if hashed else stable_name
+        if not (asset_directory / resolved).is_file():
+            raise FileNotFoundError(f"missing web asset: {asset_directory / resolved}")
+        references[f"/assets/{stable_name}"] = f"/assets/{resolved}"
+    return references
+
+
+def rewrite_web_asset_references(destination: Path) -> None:
+    references = web_asset_references(destination / "assets")
+    for page in destination.rglob("*.html"):
+        content = page.read_text(encoding="utf-8")
+        for stable, generated in references.items():
+            content = content.replace(stable, generated)
+        page.write_text(content, encoding="utf-8")
+
+
 def generate(recipes: list[dict], destination: Path, canonical_site: str) -> dict:
     validate_inputs()
     (destination / "recipe").mkdir(parents=True)
@@ -54,7 +78,7 @@ def generate(recipes: list[dict], destination: Path, canonical_site: str) -> dic
     for source in runtime_assets.iterdir():
         if source.is_file():
             shutil.copy2(source, destination / "assets" / source.name)
-    if not (destination / "assets" / "info.js").is_file():
+    if not (destination / "assets" / "info.js").is_file() and not list((destination / "assets").glob("info-*.js")):
         shutil.copy2(ASSETS / "recipe.js", destination / "assets" / "info.js")
     chunks = runtime_assets / "chunks"
     if chunks.is_dir():
@@ -90,6 +114,7 @@ def generate(recipes: list[dict], destination: Path, canonical_site: str) -> dic
             destination / "recipe" / f'{recipe["slug"]}.html',
             recipe_page(recipe, canonical_site),
         )
+    rewrite_web_asset_references(destination)
     render_pdfs(recipes, destination / "pdfs", FONTS)
 
     report = {

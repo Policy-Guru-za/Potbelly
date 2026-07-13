@@ -16,9 +16,9 @@ export default defineConfig({
         recipe: resolve(import.meta.dirname, "src/client/recipe.ts"),
       },
       output: {
-        entryFileNames: "assets/[name].js",
+        entryFileNames: "assets/[name]-[hash].js",
         chunkFileNames: "assets/chunks/[name]-[hash].js",
-        assetFileNames: ({ names }) => names.includes("style.css") ? "assets/site.css" : "assets/[name]-[hash][extname]",
+        assetFileNames: ({ names }) => names.includes("style.css") ? "assets/site-[hash][extname]" : "assets/[name]-[hash][extname]",
       },
     },
   },
