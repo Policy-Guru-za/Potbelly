@@ -54,7 +54,6 @@ async function start(): Promise<void> {
     if (!Array.isArray(payload)) throw new Error("Search index is invalid");
     recipes = (payload as SearchRecipe[]).filter((recipe) => typeof recipe.slug === "string" && rows.has(recipe.slug));
     queryInput.disabled = false;
-    document.querySelectorAll<HTMLButtonElement>(".chips button").forEach((button) => { button.disabled = false; });
     await showRecents();
     render();
   } catch {
@@ -63,16 +62,5 @@ async function start(): Promise<void> {
 }
 
 queryInput.addEventListener("input", render);
-document.querySelectorAll<HTMLButtonElement>(".chips button[data-query]").forEach((button) => {
-  button.addEventListener("click", () => {
-    queryInput.value = button.dataset.query ?? "";
-    render();
-    queryInput.focus();
-  });
-});
-requiredElement<HTMLButtonElement>("#surprise").addEventListener("click", () => {
-  const recipe = recipes[Math.floor(Math.random() * recipes.length)];
-  if (recipe) location.assign(`/recipe/${encodeURIComponent(recipe.slug)}`);
-});
 
 void start();

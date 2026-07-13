@@ -33,6 +33,19 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertIn('rel="icon" href="/icons/icon-192.png"', page)
         self.assertNotIn("Pressure cooking, beautifully clear.", page)
 
+    def test_homepage_uses_personal_copy_without_search_chips(self):
+        page = index_page([self.recipe], "https://potbelly.example")
+        self.assertIn("Laupie puts dinner under pressure.", page)
+        self.assertIn(
+            "Clear recipes, useful timings, and absolutely no waffle before dinner.",
+            page,
+        )
+        self.assertNotIn("Good food. No life story.", page)
+        self.assertNotIn('class="chips"', page)
+        self.assertNotIn("Weeknight chicken", page)
+        self.assertNotIn('id="surprise"', page)
+        self.assertIn("Try fewer words or a different ingredient.", page)
+
     def test_recipe_page_contains_canonical_and_recipe_json_ld(self):
         page = recipe_page(self.recipe, "https://potbelly.example")
         self.assertIn('rel="canonical" href="https://potbelly.example/recipe/instant-pot-stew"', page)

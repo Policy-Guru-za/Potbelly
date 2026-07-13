@@ -122,7 +122,6 @@ async function start() {
     if (!Array.isArray(payload)) throw new Error("Search index is invalid");
     data = payload.filter((item) => typeof item.slug === "string" && rows.has(item.slug));
     queryInput.disabled = false;
-    document.querySelectorAll(".chips button").forEach((button) => { button.disabled = false; });
     showRecents();
     render();
   } catch (error) {
@@ -133,17 +132,5 @@ async function start() {
 }
 
 queryInput.addEventListener("input", render);
-document.querySelectorAll(".chips button[data-query]").forEach((button) => {
-  button.addEventListener("click", () => {
-    queryInput.value = button.dataset.query;
-    render();
-    queryInput.focus();
-  });
-});
-document.querySelector("#surprise").addEventListener("click", () => {
-  if (!data.length) return;
-  const recipe = data[Math.floor(Math.random() * data.length)];
-  location.assign(`/recipe/${encodeURIComponent(recipe.slug)}`);
-});
 
 start();

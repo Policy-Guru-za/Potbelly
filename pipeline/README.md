@@ -43,6 +43,15 @@ The generated files live under `pipeline/out/`. `data.validated.json` is a candi
 artifact. Promotion is a deliberate copy/review step into root `data.json`, followed
 by the complete `pnpm verify` gate and a Vercel preview.
 
+## Editorial fallback
+
+If automated rewriting leaves the corpus below 150, an editor may fill the remaining
+slots from quality-gated candidates. Each editorial rewrite must pass the same numeric
+fidelity, non-verbatim overlap, schema, source-identity, and route-uniqueness checks as
+an automated rewrite. The reviewed records are retained in
+`pipeline/curated_additions.json`; production validation fails unless `data.json`
+contains exactly 150 unique recipes.
+
 ## Failure behavior
 
 - Network 408/429/5xx failures receive bounded exponential retries.

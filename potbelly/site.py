@@ -177,8 +177,8 @@ def index_page(recipes: list[dict[str, Any]], site: str) -> str:
   <section class="hero" aria-labelledby="search-heading"><div class="wrap">
     <div class="hero-grid"><div>
       <div class="hero-kicker label">Curated for the Instant Pot</div>
-      <h1 id="search-heading">Good food. No life story.</h1>
-      <p class="hero-copy">Loved recipes, carefully distilled into calm, practical instructions for the kitchen.</p>
+      <h1 id="search-heading">Laupie puts dinner under pressure.</h1>
+      <p class="hero-copy">Clear recipes, useful timings, and absolutely no waffle before dinner.</p>
     </div>
     <svg class="pot-illustration" viewBox="0 0 360 300" role="img" aria-label="Illustration of a warm pressure cooker">
       <path class="steam" d="M132 62c-20-24 17-31 0-53" fill="none" stroke="#b54b32" stroke-width="7" stroke-linecap="round"/>
@@ -191,13 +191,6 @@ def index_page(recipes: list[dict[str, Any]], site: str) -> str:
     <div class="search-panel">
       <label class="label" for="q">What do you want to cook?</label>
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Chicken, something sweet, dinner for six…" disabled>
-      <div class="chips" aria-label="Recipe suggestions">
-        <button type="button" data-query="weeknight chicken" disabled>Weeknight chicken</button>
-        <button type="button" data-query="soup" disabled>Soup season</button>
-        <button type="button" data-query="dessert" disabled>Something sweet</button>
-        <button type="button" data-query="side" disabled>On the side</button>
-        <button type="button" id="surprise" disabled>Surprise me</button>
-      </div>
     </div>
     <div class="recents" id="recents">
       <div class="label">Recently viewed</div>
@@ -210,7 +203,7 @@ def index_page(recipes: list[dict[str, Any]], site: str) -> str:
       <span class="label" id="listCount">{len(ordered)} recipes</span>
     </div>
     <ol class="results" id="results">{''.join(rows)}</ol>
-    <p class="empty" id="empty">Nothing matches that yet. Try fewer words or one of the suggestions above.</p>
+    <p class="empty" id="empty">Nothing matches that yet. Try fewer words or a different ingredient.</p>
   </div></section>
 </main>
 <script src="/assets/app.js" type="module"></script>

@@ -4,15 +4,31 @@ const AxeBuilder = require("@axe-core/playwright").default;
 test("search supports natural intent and preserves stable routes", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/Potbelly/);
+  const headerGap = await page.evaluate(() => {
+    const brand = document.querySelector(".brand").getBoundingClientRect();
+    const kicker = document.querySelector(".hero-kicker").getBoundingClientRect();
+    return Math.round(kicker.top - brand.bottom);
+  });
+  expect(headerGap).toBeGreaterThanOrEqual(54);
+  expect(headerGap).toBeLessThanOrEqual(58);
   const search = page.getByLabel("What do you want to cook?");
   await expect(search).toBeEnabled();
+  await expect(page.locator("#listCount")).toHaveText("150 recipes");
   await search.fill("weeknight chicken");
   await expect(page.locator("#appStatus")).toContainText(/recipe/);
   await expect(page.locator("#results li:visible")).not.toHaveCount(0);
+  await expect(page.locator("#results li:visible").first()).toContainText("Chicken");
   await search.fill("dinner for six");
   await expect(page.locator("#results li:visible")).not.toHaveCount(0);
+  await search.fill("  INSTANT-pot butter chicken!!!  ");
+  await expect(page.locator("#results li:visible").first()).toContainText("Instant Pot Butter Chicken");
+  await search.fill("cheesec");
+  await expect(page.locator("#results li:visible").first()).toContainText("Cheesecake");
+  await search.fill("shrimp sausage corn");
+  await expect(page.locator("#results li:visible").first()).toContainText("Instant Pot Shrimp Boil");
   await search.fill("query-that-cannot-match");
   await expect(page.locator("#empty")).toBeVisible();
+  await expect(page.locator("#empty")).toContainText("Try fewer words or a different ingredient.");
 });
 
 test("homepage and recipe pass serious accessibility checks", async ({ page }) => {
@@ -42,9 +58,17 @@ test("mobile controls, keyboard focus, recipe, and PDF remain usable", async ({ 
   await expect(page.getByLabel("What do you want to cook?")).toBeEnabled();
   await page.getByLabel("What do you want to cook?").focus();
   await expect(page.locator("#q")).toBeFocused();
-  const chip = page.getByRole("button", { name: "Weeknight chicken" });
-  const box = await chip.boundingBox();
+  const mobileHeaderGap = await page.evaluate(() => {
+    const brand = document.querySelector(".brand").getBoundingClientRect();
+    const kicker = document.querySelector(".hero-kicker").getBoundingClientRect();
+    return Math.round(kicker.top - brand.bottom);
+  });
+  expect(mobileHeaderGap).toBeGreaterThanOrEqual(32);
+  expect(mobileHeaderGap).toBeLessThanOrEqual(36);
+  const box = await page.locator("#q").boundingBox();
+  expect(box).not.toBeNull();
   expect(box.height).toBeGreaterThanOrEqual(44);
+  await expect(page.locator(".chips")).toHaveCount(0);
   await page.goto("/recipe/instant-pot-butter-chicken");
   await expect(page.getByRole("heading", { name: "Instant Pot Butter Chicken" })).toBeVisible();
   const pdf = await page.request.get("/pdfs/instant-pot-butter-chicken.pdf");
