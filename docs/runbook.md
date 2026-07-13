@@ -11,6 +11,8 @@
 7. Add the Worker route `potbelly.redcliffebay.com/api/*` if Wrangler has not created it automatically.
 8. Enable GitHub secret scanning and require the validation workflow on `main`.
 
+Until `CLOUDFLARE_API_TOKEN` exists, GitHub Actions still validates every push but intentionally skips deployment jobs. Local OAuth may be used for the first staging deployment only.
+
 ## AI secrets
 
 Generate the shared-code verifier and independent random secrets locally:

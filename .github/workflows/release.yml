@@ -50,6 +50,7 @@ jobs:
 
   staging:
     needs: validate
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     runs-on: ubuntu-latest
     environment: staging
     steps:
