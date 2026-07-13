@@ -46,8 +46,8 @@ function recoveryProgress(recipeSlug: string): CookingProgress | null {
 }
 
 export async function loadProgress(recipeSlug: string): Promise<CookingProgress | null> {
-  const saved = await (await database).get("progress", recipeSlug) ?? null;
   const recovery = recoveryProgress(recipeSlug);
+  const saved = await (await database).get("progress", recipeSlug) ?? null;
   if (!recovery) return saved;
   if (saved && saved.updatedAt > recovery.updatedAt) return saved;
   if (saved && serializedProgress(saved) === serializedProgress(recovery)) return saved;

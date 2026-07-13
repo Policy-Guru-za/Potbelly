@@ -9,7 +9,7 @@ async function start(): Promise<void> {
   const article = requiredElement<HTMLElement>("article[data-recipe-slug]");
   const slug = article.dataset.recipeSlug ?? "";
   const title = requiredElement<HTMLElement>("#recipeTitle").textContent.trim() || slug;
-  await addRecent({ slug, title, viewedAt: new Date().toISOString() });
+  void addRecent({ slug, title, viewedAt: new Date().toISOString() });
   const cooking = new CookingController(slug);
   await cooking.initialise();
   requiredElement<HTMLButtonElement>("#startCooking").disabled = false;

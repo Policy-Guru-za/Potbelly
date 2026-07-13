@@ -35,7 +35,7 @@ export async function initialiseShell(): Promise<void> {
 
   const updateBar = requiredElement<HTMLElement>("#updateBar");
   let update: UpdateController | null = null;
-  await registerPwa((controller) => {
+  void registerPwa((controller) => {
     update = controller;
     updateBar.hidden = false;
     setLiveMessage("An update is available.");
