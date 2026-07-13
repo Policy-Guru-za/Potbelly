@@ -12,6 +12,8 @@ async function start(): Promise<void> {
   await addRecent({ slug, title, viewedAt: new Date().toISOString() });
   const cooking = new CookingController(slug);
   await cooking.initialise();
+  requiredElement<HTMLButtonElement>("#startCooking").disabled = false;
+  requiredElement<HTMLButtonElement>("#askPotbelly").disabled = false;
   let assistant: import("./ai-assistant").AiAssistant | null = null;
   const showOfflineAssistant = (): void => {
     const dialog = requiredElement<HTMLDialogElement>("#aiDialog");

@@ -319,8 +319,8 @@ def recipe_page(recipe: dict[str, Any], site: str) -> str:
       <h1 class="rname" id="recipeTitle">{esc(recipe["title"])}</h1>
       <p class="desc">{esc(recipe["description"])}</p>
       <div class="actions">
-        <button class="btn" id="startCooking" type="button">Start cooking</button>
-        <button class="btn-secondary" id="askPotbelly" type="button">Ask Potbelly</button>
+        <button class="btn" id="startCooking" type="button" disabled>Start cooking</button>
+        <button class="btn-secondary" id="askPotbelly" type="button" disabled>Ask Potbelly</button>
         <a class="btn-quiet" href="/pdfs/{esc(recipe["slug"])}.pdf" download>Save PDF</a>
         <a class="textlink" href="{esc(recipe["source_url"])}" rel="noopener noreferrer">Original recipe</a>
       </div>

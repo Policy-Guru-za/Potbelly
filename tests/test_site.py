@@ -31,7 +31,7 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertIn('rel="canonical" href="https://potbelly.example/recipe/instant-pot-stew"', page)
         self.assertIn('"@type":"Recipe"', page)
         self.assertIn('src="/assets/recipe.js"', page)
-        self.assertIn('id="startCooking"', page)
+        self.assertIn('id="startCooking" type="button" disabled', page)
         self.assertIn('id="askPotbelly"', page)
         self.assertIn('data-step-id="step-1-1"', page)
 
