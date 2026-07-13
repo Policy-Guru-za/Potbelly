@@ -51,11 +51,11 @@ def generate(recipes: list[dict], destination: Path, canonical_site: str) -> dic
     shutil.copytree(FONTS, destination / "fonts")
     runtime_assets = WEB_ASSETS if WEB_ASSETS.is_dir() else ASSETS
     (destination / "assets").mkdir()
-    for name in ("site.css", "app.js", "info.js", "recipe.js"):
-        source = runtime_assets / name
-        if not source.is_file() and name == "info.js":
-            source = ASSETS / "recipe.js"
-        shutil.copy2(source, destination / "assets" / name)
+    for source in runtime_assets.iterdir():
+        if source.is_file():
+            shutil.copy2(source, destination / "assets" / source.name)
+    if not (destination / "assets" / "info.js").is_file():
+        shutil.copy2(ASSETS / "recipe.js", destination / "assets" / "info.js")
     chunks = runtime_assets / "chunks"
     if chunks.is_dir():
         shutil.copytree(chunks, destination / "assets" / "chunks")

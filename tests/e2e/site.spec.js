@@ -19,7 +19,13 @@ test("homepage and recipe pass serious accessibility checks", async ({ page }) =
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push(message.text());
+    if (message.type() === "error") {
+      const location = message.location().url;
+      errors.push(location ? `${message.text()} (${location})` : message.text());
+    }
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`);
   });
   for (const path of ["/", "/recipe/instant-pot-butter-chicken"]) {
     await page.goto(path);

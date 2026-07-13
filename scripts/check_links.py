@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import re
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlsplit
+
+CSS_URL = re.compile(r"url\(\s*(['\"]?)(.*?)\1\s*\)")
 
 
 class Links(HTMLParser):
@@ -52,6 +55,14 @@ def main() -> None:
             checked += 1
             if not target.is_file():
                 failures.append(f"{page}: {value} -> {target}")
+    for stylesheet in sorted(args.root.rglob("*.css")):
+        for _quote, value in CSS_URL.findall(stylesheet.read_text(encoding="utf-8")):
+            target = target_for(args.root, value)
+            if target is None:
+                continue
+            checked += 1
+            if not target.is_file():
+                failures.append(f"{stylesheet}: {value} -> {target}")
     if failures:
         raise SystemExit("broken internal links:\n" + "\n".join(failures))
     print(f"checked {checked} internal asset and route links")

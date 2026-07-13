@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
+  publicDir: false,
   build: {
     chunkSizeWarningLimit: 650,
     outDir: ".web-assets",
