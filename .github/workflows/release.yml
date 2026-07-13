@@ -39,8 +39,8 @@ jobs:
       - run: pnpm check
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm verify:links
       - run: pnpm test:e2e
+      - run: pnpm verify:links
       - run: pnpm audit --audit-level high
       - uses: actions/upload-artifact@v4
         with:

@@ -16,7 +16,9 @@ module.exports = defineConfig({
     screenshot: "only-on-failure",
   },
   webServer: process.env.BASE_URL ? undefined : {
-    command: "SITE_URL=http://127.0.0.1:4173 pnpm build && .venv/bin/python tests/serve_static.py",
+    command: process.env.CI
+      ? ".venv/bin/python tests/serve_static.py"
+      : "pnpm build && .venv/bin/python tests/serve_static.py",
     url: "http://127.0.0.1:4173",
     reuseExistingServer: !process.env.CI,
     timeout: 120000,

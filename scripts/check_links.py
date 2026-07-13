@@ -16,14 +16,18 @@ class Links(HTMLParser):
     def __init__(self) -> None:
         super().__init__()
         self.values: list[str] = []
+        self.canonicals: list[str] = []
 
     def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
         key = "href" if tag in {"a", "link"} else "src" if tag == "script" else None
         if not key:
             return
-        value = dict(attrs).get(key)
+        value = attributes.get(key)
         if value:
             self.values.append(value)
+        if tag == "link" and "canonical" in attributes.get("rel", "").split() and value:
+            self.canonicals.append(value)
 
 
 def target_for(root: Path, value: str) -> Path | None:
@@ -39,32 +43,44 @@ def target_for(root: Path, value: str) -> Path | None:
     return candidate.with_suffix(".html")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("root", type=Path)
-    args = parser.parse_args()
+def validate(root: Path, site_url: str | None = None) -> tuple[int, list[str]]:
     failures = []
     checked = 0
-    for page in sorted(args.root.rglob("*.html")):
+    for page in sorted(root.rglob("*.html")):
         links = Links()
         links.feed(page.read_text(encoding="utf-8"))
+        if site_url and page == root / "index.html":
+            expected = site_url.rstrip("/") + "/"
+            if links.canonicals != [expected]:
+                failures.append(
+                    f"{page}: canonical {links.canonicals!r} does not equal {expected!r}"
+                )
         for value in links.values:
-            target = target_for(args.root, value)
+            target = target_for(root, value)
             if target is None:
                 continue
             checked += 1
             if not target.is_file():
                 failures.append(f"{page}: {value} -> {target}")
-    for stylesheet in sorted(args.root.rglob("*.css")):
+    for stylesheet in sorted(root.rglob("*.css")):
         for _quote, value in CSS_URL.findall(stylesheet.read_text(encoding="utf-8")):
-            target = target_for(args.root, value)
+            target = target_for(root, value)
             if target is None:
                 continue
             checked += 1
             if not target.is_file():
                 failures.append(f"{stylesheet}: {value} -> {target}")
+    return checked, failures
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("root", type=Path)
+    parser.add_argument("--site-url")
+    args = parser.parse_args()
+    checked, failures = validate(args.root, args.site_url)
     if failures:
-        raise SystemExit("broken internal links:\n" + "\n".join(failures))
+        raise SystemExit("release artifact validation failed:\n" + "\n".join(failures))
     print(f"checked {checked} internal asset and route links")
 
 
