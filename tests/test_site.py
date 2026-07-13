@@ -1,0 +1,45 @@
+import json
+import unittest
+
+from potbelly.site import human_duration_to_iso, index_page, recipe_page, safe_json, search_record
+from tests.test_model import recipe
+from potbelly.model import normalize_recipe
+
+
+class SiteGenerationTests(unittest.TestCase):
+    def setUp(self):
+        self.recipe = normalize_recipe(recipe())
+
+    def test_duration_conversion_is_fail_closed(self):
+        self.assertEqual(human_duration_to_iso("1 hr 40 min"), "PT1H40M")
+        self.assertEqual(human_duration_to_iso("2 days 3 hr"), "P2DT3H")
+        self.assertIsNone(human_duration_to_iso("40 min active (plus chilling)"))
+
+    def test_json_ld_escapes_script_closing_sequence(self):
+        payload = safe_json({"name": "</script><script>alert(1)</script>"})
+        self.assertNotIn("</script>", payload)
+        self.assertIn("\\u003c", payload)
+
+    def test_index_uses_external_search_assets(self):
+        page = index_page([self.recipe], "https://potbelly.example")
+        self.assertIn('src="/assets/app.js"', page)
+        self.assertNotIn("const DATA", page)
+        self.assertNotIn("fonts.googleapis.com", page)
+
+    def test_recipe_page_contains_canonical_and_recipe_json_ld(self):
+        page = recipe_page(self.recipe, "https://potbelly.example")
+        self.assertIn('rel="canonical" href="https://potbelly.example/recipe/instant-pot-stew"', page)
+        self.assertIn('"@type":"Recipe"', page)
+        self.assertIn('src="/assets/recipe.js"', page)
+        self.assertIn('id="startCooking"', page)
+        self.assertIn('id="askPotbelly"', page)
+        self.assertIn('data-step-id="step-1-1"', page)
+
+    def test_pipeline_keywords_survive_search_index(self):
+        value = search_record(self.recipe)
+        self.assertEqual(value["keywords"], "stew dinner")
+        json.dumps(value)
+
+
+if __name__ == "__main__":
+    unittest.main()

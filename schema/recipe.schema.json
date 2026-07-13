@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://potbelly.example/schema/recipe.schema.json",
+  "title": "Potbelly recipe",
+  "type": "object",
+  "required": [
+    "schema_version", "source_id", "slug", "title", "description",
+    "category", "course", "cuisine", "servings", "prep_time",
+    "cook_time", "total_time", "ingredient_groups", "step_groups",
+    "notes", "nutrition", "keywords", "rating", "rating_count",
+    "source_name", "source_url", "quality_tier"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "source_id": {"type": "string", "pattern": "^[a-f0-9]{24}$"},
+    "slug": {"type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"},
+    "title": {"type": "string", "minLength": 1},
+    "description": {"type": "string", "minLength": 1},
+    "category": {"type": "string", "minLength": 1},
+    "course": {"type": "string"},
+    "cuisine": {"type": "string"},
+    "servings": {"type": "string"},
+    "prep_time": {"type": "string"},
+    "cook_time": {"type": "string"},
+    "total_time": {"type": "string"},
+    "ingredient_groups": {"$ref": "#/$defs/ingredientGroups"},
+    "step_groups": {"$ref": "#/$defs/stepGroups"},
+    "notes": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "nutrition": {"type": "string"},
+    "keywords": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "rating": {"type": "number", "minimum": 0, "maximum": 5},
+    "rating_count": {"type": "integer", "minimum": 0},
+    "source_name": {"type": "string", "minLength": 1},
+    "source_url": {"type": "string", "pattern": "^https://"},
+    "quality_tier": {"enum": ["standard", "legacy"]}
+  },
+  "$defs": {
+    "ingredientGroups": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["name", "items"],
+        "properties": {
+          "name": {"type": "string"},
+          "items": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        },
+        "additionalProperties": false
+      }
+    },
+    "stepGroups": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "required": ["name", "steps"],
+        "properties": {
+          "name": {"type": "string"},
+          "steps": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

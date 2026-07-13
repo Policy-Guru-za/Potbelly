@@ -1,0 +1,24 @@
+import { resolve } from "node:path";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  build: {
+    chunkSizeWarningLimit: 650,
+    outDir: ".web-assets",
+    emptyOutDir: true,
+    cssCodeSplit: false,
+    sourcemap: true,
+    rollupOptions: {
+      input: {
+        app: resolve(import.meta.dirname, "src/client/app.ts"),
+        info: resolve(import.meta.dirname, "src/client/info.ts"),
+        recipe: resolve(import.meta.dirname, "src/client/recipe.ts"),
+      },
+      output: {
+        entryFileNames: "assets/[name].js",
+        chunkFileNames: "assets/chunks/[name]-[hash].js",
+        assetFileNames: ({ names }) => names.includes("style.css") ? "assets/site.css" : "assets/[name]-[hash][extname]",
+      },
+    },
+  },
+});

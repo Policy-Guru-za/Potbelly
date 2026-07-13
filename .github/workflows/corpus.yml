@@ -1,0 +1,37 @@
+name: Prepare corpus expansion
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Unique recipe target
+        required: true
+        default: "150"
+
+permissions:
+  contents: read
+
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    environment: corpus-production
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - run: pnpm setup:python
+      - run: .venv/bin/python pipeline/expand_corpus.py --target "${{ inputs.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: corpus-candidate-${{ github.run_id }}
+          path: |
+            pipeline/out/data.json
+            pipeline/out/report.txt
+            pipeline/out/attempted.json
+          retention-days: 30

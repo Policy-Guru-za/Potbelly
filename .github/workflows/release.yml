@@ -1,0 +1,114 @@
+name: Validate and release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: potbelly-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  SITE_URL: https://potbelly.redcliffebay.com
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: sudo apt-get update && sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm setup:python
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm check
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm verify:links
+      - run: pnpm test:e2e
+      - run: pnpm audit --audit-level high
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validated-potbelly-release
+          path: dist/
+          retention-days: 14
+
+  staging:
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: validated-potbelly-release
+          path: dist
+      - run: pnpm exec wrangler pages deploy dist --project-name potbelly-staging --branch main --commit-dirty=true
+      - run: pnpm worker:deploy:staging
+
+  verify-staging:
+    needs: staging
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: ${{ vars.POTBELLY_STAGING_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: test -n "$BASE_URL"
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm test:e2e
+      - run: curl --fail --silent --show-error "$BASE_URL/manifest.webmanifest" >/dev/null
+      - run: curl --fail --silent --show-error "$BASE_URL/sw.js" >/dev/null
+
+  production:
+    needs: verify-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: validated-potbelly-release
+          path: dist
+      - run: pnpm exec wrangler pages deploy dist --project-name potbelly --branch main --commit-dirty=true
+      - run: pnpm worker:deploy:production
+      - run: curl --retry 5 --retry-delay 5 --fail --silent --show-error https://potbelly.redcliffebay.com/ >/dev/null
+      - run: curl --retry 5 --retry-delay 5 --fail --silent --show-error https://potbelly.redcliffebay.com/api/health >/dev/null

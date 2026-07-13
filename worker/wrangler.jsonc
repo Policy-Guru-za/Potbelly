@@ -1,0 +1,43 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "potbelly-ai",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "durable_objects": {
+    "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["RateLimiter"] }],
+  "vars": {
+    "ENVIRONMENT": "local",
+    "ALLOWED_ORIGINS": "http://127.0.0.1:4173,http://localhost:4173",
+    "OPENAI_REALTIME_MODEL": "gpt-realtime-2.1-mini",
+    "OPENAI_REALTIME_VOICE": "marin",
+    "AI_ACCESS_VERSION": "1",
+    "AI_ENABLED": "false"
+  },
+  "env": {
+    "staging": {
+      "name": "potbelly-ai-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "ALLOWED_ORIGINS": "https://potbelly-staging.pages.dev,https://potbelly-staging.redcliffebay.com",
+        "OPENAI_REALTIME_MODEL": "gpt-realtime-2.1-mini",
+        "OPENAI_REALTIME_VOICE": "marin",
+        "AI_ACCESS_VERSION": "1"
+      }
+    },
+    "production": {
+      "name": "potbelly-ai-production",
+      "routes": [{ "pattern": "potbelly.redcliffebay.com/api/*", "zone_name": "redcliffebay.com" }],
+      "vars": {
+        "ENVIRONMENT": "production",
+        "ALLOWED_ORIGINS": "https://potbelly.redcliffebay.com",
+        "OPENAI_REALTIME_MODEL": "gpt-realtime-2.1-mini",
+        "OPENAI_REALTIME_VOICE": "marin",
+        "AI_ACCESS_VERSION": "1"
+      }
+    }
+  }
+}
