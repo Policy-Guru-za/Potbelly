@@ -33,6 +33,9 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertIn('src="/assets/recipe.js"', page)
         self.assertIn('id="startCooking" type="button" disabled', page)
         self.assertIn('id="askPotbelly"', page)
+        self.assertIn('data-ai-stage="consent"', page)
+        self.assertNotIn('data-ai-stage="unlock"', page)
+        self.assertNotIn('id="aiAccessCode"', page)
         self.assertIn('data-step-id="step-1-1"', page)
 
     def test_pipeline_keywords_survive_search_index(self):

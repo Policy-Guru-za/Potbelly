@@ -349,11 +349,8 @@ def ai_dialog() -> str:
     return """<dialog class="dialog" id="aiDialog">
   <div class="dialog-head"><h2>Ask Potbelly</h2><button class="icon-button" id="aiClose" type="button" aria-label="Close cooking assistant">×</button></div>
   <div class="dialog-body">
-    <section data-ai-stage="loading"><h3>Warming up…</h3><p>Checking AI access.</p></section>
+    <section data-ai-stage="loading"><h3>Warming up…</h3><p>Checking assistant availability.</p></section>
     <section data-ai-stage="offline" hidden><h3>Assistant unavailable</h3><p>The assistant needs internet. The complete recipe remains available.</p></section>
-    <section data-ai-stage="unlock" hidden><h3>AI access</h3><p>The cookbook is public. This shared code protects only the realtime AI service.</p>
-      <form id="aiUnlockForm"><label class="field-label label" for="aiAccessCode">Access code</label><input class="field" id="aiAccessCode" type="password" inputmode="numeric" autocomplete="one-time-code" required maxlength="32"><p class="field-error" id="aiUnlockError" aria-live="polite"></p><button class="btn" id="unlockAi" type="submit">Unlock assistant</button></form>
-    </section>
     <section data-ai-stage="consent" hidden><h3>Before you start</h3><p>Your microphone audio and this recipe's context will be sent to OpenAI for a live response. Potbelly does not display or save a transcript.</p><p>AI can make mistakes. Follow appliance safety instructions and use a food thermometer where appropriate.</p><div class="dialog-actions"><button class="btn" id="acceptVoiceConsent" type="button">Accept and continue</button></div></section>
     <section data-ai-stage="ready" hidden><h3>Ready when you are.</h3><p>Ask about heat, texture, substitutions, timing, pressure release, or the next step. Potbelly answers aloud.</p><div class="dialog-actions"><button class="btn-secondary" id="startVoiceSession" type="button">Start voice assistant</button></div></section>
     <section class="voice-shell" data-ai-stage="session" hidden>
@@ -392,7 +389,7 @@ def information_page(kind: str, site: str) -> str:
         "support": (
             "Support",
             "Quick fixes in the kitchen.",
-            """<p>If the app looks out of date, close and reopen it, then accept the update prompt. If offline recipes are unavailable, reconnect once and leave the cookbook open until it has loaded.</p><p>Microphone problems: open iPad Settings, find Safari or Potbelly, and allow microphone access. The AI assistant also requires internet access and a valid AI access code.</p><p>For recipe attribution or technical support, contact <a class="textlink" href="mailto:Ryan@redcliffebay.com">Ryan@redcliffebay.com</a>.</p>""",
+            """<p>If the app looks out of date, close and reopen it, then accept the update prompt. If offline recipes are unavailable, reconnect once and leave the cookbook open until it has loaded.</p><p>Microphone problems: open iPad Settings, find Safari or Potbelly, and allow microphone access. The AI assistant also requires an internet connection and available daily quota.</p><p>For recipe attribution or technical support, contact <a class="textlink" href="mailto:Ryan@redcliffebay.com">Ryan@redcliffebay.com</a>.</p>""",
         ),
     }
     title, lead, content = pages[kind]

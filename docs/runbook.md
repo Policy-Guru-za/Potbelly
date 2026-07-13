@@ -15,23 +15,15 @@ Until `CLOUDFLARE_API_TOKEN` exists, keep the repository variable `CLOUDFLARE_DE
 
 ## AI secrets
 
-Generate the shared-code verifier and independent random secrets locally:
-
-```sh
-pnpm ai:secrets --code "your-shared-code"
-```
-
-The command prints shell commands without saving the code. Apply each value separately to staging and production:
+Apply the OpenAI credential and an independent random rate-limit hashing secret separately to staging and production:
 
 ```sh
 pnpm exec wrangler secret put OPENAI_API_KEY --config worker/wrangler.jsonc --env staging
-pnpm exec wrangler secret put AI_ACCESS_CODE_VERIFIER --config worker/wrangler.jsonc --env staging
-pnpm exec wrangler secret put AI_ACCESS_CODE_SALT --config worker/wrangler.jsonc --env staging
-pnpm exec wrangler secret put AI_SESSION_HMAC_SECRET --config worker/wrangler.jsonc --env staging
 pnpm exec wrangler secret put AI_RATE_LIMIT_HASH_SECRET --config worker/wrangler.jsonc --env staging
 ```
 
 Repeat with `--env production`. Do not add values to GitHub, Pages variables, source files, browser assets, or logs.
+The public assistant has no PIN or sign-in. The Worker still requires same-origin requests, short-lived browser credentials, privacy-preserving identifiers, and strict daily quotas.
 
 Keep `AI_ENABLED=false` during initial staging. Enable only after the voice evaluation corpus passes:
 
@@ -48,7 +40,7 @@ Enter `true` when prompted. Use the same command with `false` as the emergency k
 3. Push `main`.
 4. Confirm validate, staging, and verify-staging are green.
 5. Approve the production environment.
-6. Confirm `/`, one recipe, one PDF, `manifest.webmanifest`, `sw.js`, and `/api/health`.
+6. Confirm `/`, one recipe, one PDF, `manifest.webmanifest`, `sw.js`, and `pnpm verify:ai-health`.
 7. Cold-launch the Home Screen app in airplane mode before declaring the release complete.
 
 ## Rollback
@@ -59,9 +51,9 @@ For static regressions, redeploy the previous immutable Pages deployment in Clou
 
 - Weekly GitHub health workflow: live browser flow and source-link audit.
 - OpenAI project: usage alerts and a hard monthly budget.
-- Cloudflare: Worker errors, AI access failures, quota spikes, and provider failures.
+- Cloudflare: Worker errors, AI session failures, quota spikes, and provider failures.
 - Logs: request ID, endpoint, status, and latency only.
-- Never log access codes, cookies, raw IP addresses, device IDs, recipe progress, microphone audio, questions, responses, or ephemeral credentials.
+- Never log raw IP addresses, device IDs, recipe progress, microphone audio, questions, responses, or ephemeral credentials.
 
 ## Physical-iPad gate
 

@@ -2,12 +2,10 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { buildInstructions, findRecipe, validIngredientIds, validStepIds } from "./recipes";
 import { RateLimiter } from "./rate-limiter";
-import { clearSessionCookie, createSessionCookie, hasValidSession, privacyHash, verifyAccessCode } from "./security";
-import type { Env } from "./types";
+import { privacyHash } from "./security";
 
 export { RateLimiter };
 
-const unlockSchema = z.object({ code: z.string().min(4).max(32) }).strict();
 const realtimeSchema = z.object({
   recipeSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u),
   anonymousDeviceId: z.uuid(),
@@ -36,25 +34,9 @@ function limiter(env: Env, identity: string): DurableObjectStub<RateLimiter> {
   return env.RATE_LIMITER.getByName(identity);
 }
 
-async function unlock(request: Request, env: Env): Promise<Response> {
-  if (!allowedOrigin(request, env)) return response({ error: "Request not accepted." }, 403);
-  const parsed = unlockSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return response({ error: "Request not accepted." }, 400);
-  const ipKey = await privacyHash(ipAddress(request), env.AI_RATE_LIMIT_HASH_SECRET, "unlock");
-  const guard = limiter(env, ipKey);
-  if (await guard.count("failed-unlock", 15 * 60_000) >= 5) return response({ error: "Request not accepted." }, 429);
-  const valid = await verifyAccessCode(parsed.data.code, env.AI_ACCESS_CODE_SALT, env.AI_ACCESS_CODE_VERIFIER);
-  if (!valid) {
-    await guard.record("failed-unlock");
-    return response({ error: "Request not accepted." }, 401);
-  }
-  return response({ unlocked: true }, 200, { "set-cookie": await createSessionCookie(env.AI_SESSION_HMAC_SECRET, env.AI_ACCESS_VERSION) });
-}
-
 async function realtimeSession(request: Request, env: Env): Promise<Response> {
   if (!allowedOrigin(request, env)) return response({ error: "Request not accepted." }, 403);
   if (env.AI_ENABLED !== "true") return response({ error: "AI is unavailable." }, 503);
-  if (!await hasValidSession(request, env.AI_SESSION_HMAC_SECRET, env.AI_ACCESS_VERSION)) return response({ error: "AI access required." }, 401);
   const parsed = realtimeSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return response({ error: "Request not accepted." }, 400);
   const recipe = findRecipe(parsed.data.recipeSlug);
@@ -75,7 +57,7 @@ async function realtimeSession(request: Request, env: Env): Promise<Response> {
   if (!deviceAllowed || !ipAllowed) return response({ error: "Daily AI allowance reached." }, 429);
 
   const instructions = buildInstructions(recipe, parsed.data.activeStepId);
-  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  const client = new OpenAI({ apiKey: env.OPENAI_API_KEY, maxRetries: 1, timeout: 15_000 });
   const secret = await client.realtime.clientSecrets.create({
     expires_after: { anchor: "created_at", seconds: 60 },
     session: {
@@ -109,9 +91,7 @@ export default {
     let result: Response;
     try {
       if (url.pathname === "/api/health" && request.method === "GET") result = response({ ok: true, aiEnabled: env.AI_ENABLED === "true", model: env.OPENAI_REALTIME_MODEL });
-      else if (url.pathname === "/api/ai/status" && request.method === "GET") result = response({ aiEnabled: env.AI_ENABLED === "true", unlocked: await hasValidSession(request, env.AI_SESSION_HMAC_SECRET, env.AI_ACCESS_VERSION) });
-      else if (url.pathname === "/api/ai/unlock" && request.method === "POST") result = await unlock(request, env);
-      else if (url.pathname === "/api/ai/unlock" && request.method === "DELETE") result = allowedOrigin(request, env) ? response({ unlocked: false }, 200, { "set-cookie": clearSessionCookie() }) : response({ error: "Request not accepted." }, 403);
+      else if (url.pathname === "/api/ai/status" && request.method === "GET") result = response({ aiEnabled: env.AI_ENABLED === "true" });
       else if (url.pathname === "/api/ai/realtime-session" && request.method === "POST") result = await realtimeSession(request, env);
       else result = response({ error: "Not found." }, 404);
     } catch {

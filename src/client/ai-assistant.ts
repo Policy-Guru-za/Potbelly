@@ -19,7 +19,6 @@ const sessionResponseSchema = z.object({
 });
 
 interface AiStatus {
-  unlocked: boolean;
   aiEnabled: boolean;
 }
 
@@ -40,7 +39,6 @@ export class AiAssistant {
 
   initialise(): void {
     requiredElement<HTMLButtonElement>("#aiClose").addEventListener("click", () => this.close());
-    requiredElement<HTMLFormElement>("#aiUnlockForm").addEventListener("submit", (event) => void this.unlock(event));
     requiredElement<HTMLButtonElement>("#acceptVoiceConsent").addEventListener("click", () => void this.acceptConsent());
     requiredElement<HTMLButtonElement>("#startVoiceSession").addEventListener("click", () => void this.start());
     requiredElement<HTMLButtonElement>("#muteVoice").addEventListener("click", () => this.toggleMute());
@@ -65,40 +63,10 @@ export class AiAssistant {
       if (!status.aiEnabled) {
         this.setState("Unavailable", "The assistant is currently switched off. Try again later.");
         this.showStage("offline");
-      } else if (!status.unlocked) this.showStage("unlock");
-      else await this.showConsentOrReady();
+      } else await this.showConsentOrReady();
     } catch {
       this.setState("Connection lost", "We could not reach the cooking assistant. Check your connection.");
       this.showStage("offline");
-    }
-  }
-
-  private async unlock(event: SubmitEvent): Promise<void> {
-    event.preventDefault();
-    const code = requiredElement<HTMLInputElement>("#aiAccessCode");
-    const error = requiredElement<HTMLElement>("#aiUnlockError");
-    error.textContent = "";
-    const button = requiredElement<HTMLButtonElement>("#unlockAi");
-    button.disabled = true;
-    try {
-      const response = await fetch("/api/ai/unlock", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code: code.value }),
-      });
-      code.value = "";
-      if (!response.ok) {
-        error.textContent = response.status === 429
-          ? "Too many attempts. Wait before trying again."
-          : "That access code was not accepted.";
-        return;
-      }
-      await this.showConsentOrReady();
-    } catch {
-      error.textContent = "The assistant could not be reached. Check your connection.";
-    } finally {
-      button.disabled = false;
     }
   }
 
@@ -130,10 +98,6 @@ export class AiAssistant {
           completedStepIds: state.completedStepIds,
         }),
       });
-      if (response.status === 401) {
-        this.showStage("unlock");
-        return;
-      }
       if (!response.ok) throw new Error(`Session request failed: ${response.status}`);
       const config: RealtimeSessionResponse = sessionResponseSchema.parse(await response.json());
       this.session = this.createSession(config);

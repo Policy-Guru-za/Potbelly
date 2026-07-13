@@ -5,6 +5,9 @@
   "compatibility_date": "2026-07-13",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "secrets": {
+    "required": ["OPENAI_API_KEY", "AI_RATE_LIMIT_HASH_SECRET", "AI_ENABLED"]
+  },
   "durable_objects": {
     "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
   },
@@ -13,8 +16,7 @@
     "ENVIRONMENT": "local",
     "ALLOWED_ORIGINS": "http://127.0.0.1:4173,http://localhost:4173",
     "OPENAI_REALTIME_MODEL": "gpt-realtime-2.1-mini",
-    "OPENAI_REALTIME_VOICE": "marin",
-    "AI_ACCESS_VERSION": "1"
+    "OPENAI_REALTIME_VOICE": "marin"
   },
   "env": {
     "staging": {
@@ -23,12 +25,14 @@
       "durable_objects": {
         "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
       },
+      "secrets": {
+        "required": ["OPENAI_API_KEY", "AI_RATE_LIMIT_HASH_SECRET", "AI_ENABLED"]
+      },
       "vars": {
         "ENVIRONMENT": "staging",
         "ALLOWED_ORIGINS": "https://potbelly-staging.pages.dev,https://potbelly-staging.redcliffebay.com",
         "OPENAI_REALTIME_MODEL": "gpt-realtime-2.1-mini",
-        "OPENAI_REALTIME_VOICE": "marin",
-        "AI_ACCESS_VERSION": "1"
+        "OPENAI_REALTIME_VOICE": "marin"
       }
     },
     "production": {
@@ -37,12 +41,14 @@
       "durable_objects": {
         "bindings": [{ "name": "RATE_LIMITER", "class_name": "RateLimiter" }]
       },
+      "secrets": {
+        "required": ["OPENAI_API_KEY", "AI_RATE_LIMIT_HASH_SECRET", "AI_ENABLED"]
+      },
       "vars": {
         "ENVIRONMENT": "production",
         "ALLOWED_ORIGINS": "https://potbelly.redcliffebay.com",
         "OPENAI_REALTIME_MODEL": "gpt-realtime-2.1-mini",
-        "OPENAI_REALTIME_VOICE": "marin",
-        "AI_ACCESS_VERSION": "1"
+        "OPENAI_REALTIME_VOICE": "marin"
       }
     }
   }

@@ -13,12 +13,12 @@ Validated data.json → Python HTML/PDF generation → strict TypeScript/Vite as
 
 `data.json` remains the production recipe source of truth. `dist/` is generated and
 must not be edited manually. IndexedDB stores local cooking progress. The public
-cookbook needs no login. A separate shared code protects only the billable AI feature.
+cookbook and AI assistant need no login.
 
-The Cloudflare Worker validates that code, enforces quotas with a Durable Object, and
-creates short-lived OpenAI Realtime client secrets. The permanent API key never enters
-the browser. Microphone audio travels directly from the browser to OpenAI over WebRTC;
-Potbelly does not display or deliberately retain a transcript.
+The Cloudflare Worker validates requests, enforces per-device and per-IP quotas with a
+Durable Object, and creates short-lived OpenAI Realtime client secrets. The permanent
+API key never enters the browser. Microphone audio travels directly from the browser to
+OpenAI over WebRTC; Potbelly does not display or deliberately retain a transcript.
 
 ## Local development
 

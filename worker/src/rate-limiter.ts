@@ -1,5 +1,4 @@
 import { DurableObject } from "cloudflare:workers";
-import type { Env } from "./types";
 
 export class RateLimiter extends DurableObject<Env> {
   constructor(state: DurableObjectState, env: Env) {

@@ -1,9 +1,8 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import worker from "../src/index";
-import type { Env } from "../src/types";
 
-const bindings = env as unknown as Env;
+const bindings = env;
 
 describe("RateLimiter Durable Object", () => {
   it("counts and atomically enforces a limit", async () => {
@@ -26,5 +25,16 @@ describe("Worker boundary", () => {
       aiEnabled: false,
       model: "gpt-realtime-2.1-mini",
     });
+  });
+
+  it("reports public AI availability without an unlock state", async () => {
+    const result = await worker.fetch(new Request("https://potbelly.test/api/ai/status"), bindings);
+    expect(result.status).toBe(200);
+    expect(await result.json()).toEqual({ aiEnabled: false });
+  });
+
+  it("does not expose the retired unlock endpoint", async () => {
+    const result = await worker.fetch(new Request("https://potbelly.test/api/ai/unlock", { method: "POST" }), bindings);
+    expect(result.status).toBe(404);
   });
 });
