@@ -1,5 +1,5 @@
 import "../styles/site.css";
-import type { DiscoveryFilter, DiscoverySort, SearchRecipe, ShoppingItem } from "../domain/types";
+import type { DiscoveryFilter, SearchRecipe, ShoppingItem } from "../domain/types";
 import {
   clearShoppingItems, getActiveProgress, getFavourites, getRecents, getShoppingItems,
   toggleFavourite, updateShoppingItem,
@@ -19,7 +19,6 @@ const rows = new Map([...document.querySelectorAll<HTMLElement>("#results li[dat
 let recipes: SearchRecipe[] = [];
 let favourites = new Set<string>();
 let filter: DiscoveryFilter = "all";
-let sort: DiscoverySort = "popular";
 let selected: SearchRecipe | null = null;
 let visibleLimit = 24;
 
@@ -56,10 +55,10 @@ function setPreview(recipe: SearchRecipe | null): void {
 }
 
 function render(): void {
-  const matches = discoverRecipes(recipes, queryInput.value, filter, sort, favourites);
+  const matches = discoverRecipes(recipes, queryInput.value, filter);
   const visible = matches.slice(0, visibleLimit);
   const queryActive = tokenize(queryInput.value).length > 0;
-  label.textContent = queryActive ? "Results · best match first" : sort === "popular" ? "The cookbook · most loved" : "The cookbook";
+  label.textContent = queryActive ? "Results · best match first" : "The cookbook · most loved";
   for (const row of rows.values()) row.hidden = true;
   visible.forEach((recipe, index) => {
     const row = rows.get(recipe.slug);
@@ -101,15 +100,6 @@ async function renderDashboard(): Promise<void> {
   favourites = new Set(saved.map(({ slug }) => slug));
   renderLinks(requiredElement("#favouriteItems"), saved, "Save recipes you want close at hand.");
   renderLinks(requiredElement("#recentDashboard"), recents, "Your latest recipes will appear here.");
-  const recentsBox = requiredElement<HTMLElement>("#recentItems");
-  recentsBox.replaceChildren();
-  for (const recipe of recents) {
-    const anchor = document.createElement("a");
-    anchor.href = `/recipe/${encodeURIComponent(recipe.slug)}`;
-    anchor.textContent = recipe.title;
-    recentsBox.append(anchor);
-  }
-  requiredElement<HTMLElement>("#recents").classList.toggle("is-visible", recents.length > 0);
   const latest = progress[0];
   const recipe = latest ? recipes.find(({ slug }) => slug === latest.recipeSlug) : null;
   if (latest && recipe) {
@@ -154,11 +144,6 @@ function shoppingRow(item: ShoppingItem): HTMLLabelElement {
 
 function bind(): void {
   queryInput.addEventListener("input", () => { visibleLimit = 24; render(); });
-  requiredElement<HTMLSelectElement>("#sortRecipes").addEventListener("change", (event) => {
-    sort = (event.currentTarget as HTMLSelectElement).value as DiscoverySort;
-    visibleLimit = 24;
-    render();
-  });
   document.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((button) => button.addEventListener("click", () => {
     filter = button.dataset.filter as DiscoveryFilter;
     visibleLimit = 24;

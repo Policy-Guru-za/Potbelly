@@ -1,4 +1,4 @@
-import type { DiscoveryFilter, DiscoverySort, SearchRecipe } from "../domain/types";
+import type { DiscoveryFilter, SearchRecipe } from "../domain/types";
 
 const STOP_WORDS = new Set(["a", "an", "and", "for", "of", "please", "the", "to", "with"]);
 const NUMBER_WORDS = new Map([
@@ -110,14 +110,8 @@ function matchesFilter(recipe: SearchRecipe, filter: DiscoveryFilter): boolean {
 
 export function discoverRecipes(
   recipes: SearchRecipe[], query: string, filter: DiscoveryFilter = "all",
-  sort: DiscoverySort = "popular", favouriteSlugs: ReadonlySet<string> = new Set(),
 ): SearchRecipe[] {
-  let visible = searchRecipes(recipes, query).filter((recipe) => matchesFilter(recipe, filter));
-  if (sort === "favourites") visible = visible.filter((recipe) => favouriteSlugs.has(recipe.slug));
-  if (sort === "fastest") visible.sort((left, right) => (left.durationMinutes ?? Number.MAX_SAFE_INTEGER)
-    - (right.durationMinutes ?? Number.MAX_SAFE_INTEGER) || right.popularity - left.popularity);
-  if (sort === "alphabetical") visible.sort((left, right) => left.title.localeCompare(right.title, "en"));
-  return visible;
+  return searchRecipes(recipes, query).filter((recipe) => matchesFilter(recipe, filter));
 }
 
 export function searchRecipes(recipes: SearchRecipe[], query: string): SearchRecipe[] {

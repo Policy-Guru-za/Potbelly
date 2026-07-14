@@ -123,7 +123,10 @@ def head(*, title: str, description: str, canonical: str, site: str,
   </a>
   <div class="header-actions">
     <span class="status-pill" id="networkStatus" data-state="online">Online</span>
-    <button class="icon-button" type="button" data-open-dialog="#aboutDialog" aria-label="About and install Potbelly">i</button>
+    <button class="about-button" type="button" data-open-dialog="#aboutDialog" aria-label="About, installation and local data">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 10.7v6M12 7.2h.01"></path></svg>
+      <span>About</span>
+    </button>
   </div>
 </div></header>
 <p class="visually-hidden" id="appStatus" aria-live="polite"></p>
@@ -208,37 +211,20 @@ def index_page(recipes: list[dict[str, Any]], site: str) -> str:
     ) + f"""
 <main id="main">
   <section class="dashboard" id="dashboard" aria-labelledby="dashboardTitle"><div class="wrap">
-    <div class="dashboard-head"><div><div class="label">Your kitchen</div><h1 id="dashboardTitle">What are we making?</h1></div><button class="btn-quiet" id="openShopping" type="button">Shopping list <span id="shoppingCount">0</span></button></div>
+    <div class="dashboard-head"><div><div class="label dashboard-kicker">A Curation of Instant Pot Recipes</div><h1 id="dashboardTitle">What are we making?</h1></div><button class="btn-quiet" id="openShopping" type="button">Shopping list <span id="shoppingCount">0</span></button></div>
     <div class="dashboard-grid">
       <section class="dashboard-card dashboard-continue" id="continueCard" hidden><span class="label">Continue cooking</span><a id="continueLink" href="/"><strong id="continueTitle">Recipe</strong><span id="continueMeta">Resume where you left off →</span></a></section>
       <section class="dashboard-card"><span class="label">Favourites</span><div class="dashboard-links" id="favouriteItems"><p>Save recipes you want close at hand.</p></div></section>
       <section class="dashboard-card"><span class="label">Recently viewed</span><div class="dashboard-links" id="recentDashboard"><p>Your latest recipes will appear here.</p></div></section>
     </div>
   </div></section>
-  <section class="hero" aria-labelledby="search-heading"><div class="wrap">
-    <div class="hero-grid"><div>
-      <div class="hero-kicker label">Curated for the Instant Pot</div>
-      <h1 id="search-heading">Laupie puts dinner under pressure.</h1>
-      <p class="hero-copy">Clear recipes, useful timings, and absolutely no waffle before dinner.</p>
-    </div>
-    <svg class="pot-illustration" viewBox="0 0 360 300" role="img" aria-label="Illustration of a warm pressure cooker">
-      <path class="steam" d="M132 62c-20-24 17-31 0-53" fill="none" stroke="#b54b32" stroke-width="7" stroke-linecap="round"/>
-      <path class="steam" d="M180 52c-18-22 19-30 1-48" fill="none" stroke="#b54b32" stroke-width="7" stroke-linecap="round"/>
-      <path class="steam" d="M228 62c-20-24 17-31 0-53" fill="none" stroke="#b54b32" stroke-width="7" stroke-linecap="round"/>
-      <path d="M82 103h196l-15 145c-3 25-21 39-45 39h-76c-24 0-42-14-45-39L82 103Z" fill="#53664d"/>
-      <path d="M67 94c0-13 10-23 23-23h180c13 0 23 10 23 23v19H67V94Z" fill="#2b241d"/>
-      <path d="M139 57h82v20h-82z" fill="#d5a53d"/><circle cx="180" cy="177" r="51" fill="#f6f0e4"/><path d="M152 177h56M180 149v56" stroke="#b54b32" stroke-width="8" stroke-linecap="round"/>
-    </svg></div>
+  <section class="hero" aria-label="Find a recipe"><div class="wrap">
     <div class="search-panel">
       <label class="label" for="q">What do you want to cook?</label>
       <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Chicken, dessert, or dinner for six" disabled>
       <div class="discovery-controls"><div class="filter-scroll" id="filters" aria-label="Recipe filters">
         <button type="button" data-filter="all" aria-pressed="true">All</button><button type="button" data-filter="under-30" aria-pressed="false">Under 30 min</button><button type="button" data-filter="chicken" aria-pressed="false">Chicken</button><button type="button" data-filter="beef" aria-pressed="false">Beef</button><button type="button" data-filter="vegetarian" aria-pressed="false">Vegetarian</button><button type="button" data-filter="soup" aria-pressed="false">Soups</button><button type="button" data-filter="dessert" aria-pressed="false">Desserts</button><button type="button" data-filter="indian" aria-pressed="false">Indian</button>
-      </div><label class="sort-control">Sort <select id="sortRecipes"><option value="popular">Most loved</option><option value="fastest">Fastest</option><option value="alphabetical">A–Z</option><option value="favourites">Favourites</option></select></label></div>
-    </div>
-    <div class="recents" id="recents">
-      <div class="label">Recently viewed</div>
-      <div class="items" id="recentItems"></div>
+      </div></div>
     </div>
   </div></section>
   <section class="cookbook" aria-labelledby="listLabel"><div class="wrap cookbook-master"><div class="catalogue-pane">
@@ -316,16 +302,20 @@ def recipe_page(recipe: dict[str, Any], site: str) -> str:
         for group_index, group in enumerate(recipe["ingredient_groups"])
     )
     step_items = []
+    total_steps = sum(len(group["steps"]) for group in recipe["step_groups"])
+    global_step_index = 0
     for group_index, group in enumerate(recipe["step_groups"]):
         if group["name"]:
             step_items.append(f'<div class="gsteps">{esc(group["name"])}</div>')
         step_items.append('<ol class="steps">')
         for step_index, step in enumerate(group["steps"]):
+            global_step_index += 1
             step_id = f"step-{group_index + 1}-{step_index + 1}"
+            action_label = "Finish cooking" if global_step_index == total_steps else "Done — next step"
             step_items.append(
-                f'<li class="step-card" data-step-id="{step_id}"><p>{esc(step)}</p>'
+                f'<li class="step-card" data-step-id="{step_id}" data-step-number="{global_step_index}"><p>{esc(step)}</p>'
                 '<div class="step-actions">'
-                '<button class="step-done" type="button" data-complete-step aria-pressed="false">Done — next step</button>'
+                f'<button class="step-done" type="button" data-complete-step aria-pressed="false">{action_label}</button>'
                 '</div></li>'
             )
         step_items.append('</ol>')
@@ -363,7 +353,7 @@ def recipe_page(recipe: dict[str, Any], site: str) -> str:
         <button class="btn-quiet" id="favouriteRecipe" type="button" aria-pressed="false">♡ Favourite</button>
         <button class="btn-quiet" id="addToShopping" type="button">Add to shopping</button>
         <button class="btn-quiet" id="shareRecipe" type="button">Share</button>
-        <a class="btn-quiet" href="/pdfs/{esc(recipe["slug"])}.pdf" download>Save PDF</a>
+        <button class="btn-quiet" id="savePdf" type="button" data-pdf-url="/pdfs/{esc(recipe["slug"])}.pdf" data-pdf-filename="potbelly-{esc(recipe["slug"])}.pdf">Save PDF</button>
         <a class="textlink" href="{esc(recipe["source_url"])}" rel="noopener noreferrer">Original recipe</a>
       </div>
     </div><div class="meta">{meta}</div></div>
@@ -379,10 +369,19 @@ def recipe_page(recipe: dict[str, Any], site: str) -> str:
   </article>
 </main>
 <nav class="cooking-dock" id="cookingDock" aria-label="Cooking controls" hidden>
-  <button class="dock-icon" id="previousStep" type="button" aria-label="Previous step">←</button>
-  <div class="dock-center"><span class="dock-progress" id="cookingProgress">Cooking</span><button id="showIngredients" type="button">Ingredients</button><button id="textSize" type="button">Text</button><button id="undoCooking" type="button">Undo</button><button id="resetCooking" type="button">Reset</button><button id="exitCooking" type="button">Exit</button></div>
-  <button class="dock-icon" id="nextStep" type="button" aria-label="Next step">→</button>
+  <div class="dock-navigation">
+    <button class="dock-nav" id="previousStep" type="button" aria-label="Previous step"><span aria-hidden="true">←</span></button>
+    <span class="dock-progress" id="cookingProgress">Cooking</span>
+    <button class="dock-next" id="nextStep" type="button" aria-label="Next step"><span id="nextStepLabel">Next</span><span aria-hidden="true">→</span></button>
+  </div>
+  <div class="dock-tools">
+    <button class="dock-tool" id="showIngredients" type="button"><span class="dock-tool-icon" aria-hidden="true">≡</span><span>Ingredients</span></button>
+    <button class="dock-tool" id="openVoiceAssistant" type="button"><span class="dock-tool-icon dock-mic" aria-hidden="true"></span><span>Assistant</span></button>
+    <button class="dock-tool" id="textSize" type="button"><span class="dock-tool-icon dock-text" aria-hidden="true">Aa</span><span>Text size</span></button>
+    <details class="dock-overflow"><summary><span class="dock-tool-icon" aria-hidden="true">•••</span><span>More</span></summary><div class="dock-more"><button id="undoCooking" type="button">Undo last change</button><button id="resetCooking" type="button">Reset cooking</button><button id="exitCooking" type="button">Exit Cooking Mode</button></div></details>
+  </div>
 </nav>
+<button class="ingredients-backdrop" id="ingredientsBackdrop" type="button" aria-label="Dismiss ingredients panel"></button>
 <div class="timer-rail" id="timerRail" hidden aria-live="polite"></div>
 <dialog class="dialog confirm-dialog" id="resetDialog"><div class="dialog-head"><h2>Reset this cook?</h2><button class="icon-button" type="button" data-close-dialog aria-label="Close">×</button></div><div class="dialog-body"><p>Ingredient checks, completed steps, and timers for this recipe will be cleared.</p><div class="dialog-actions"><button class="btn btn-danger-solid" id="confirmReset" type="button">Reset everything</button><button class="btn-quiet" id="cancelReset" type="button">Keep cooking</button></div></div></dialog>
 {ai_dialog()}
@@ -392,12 +391,12 @@ def recipe_page(recipe: dict[str, Any], site: str) -> str:
 
 def ai_dialog() -> str:
     return """<aside class="ai-panel" id="aiDialog" role="dialog" aria-modal="false" aria-labelledby="aiPanelTitle" hidden>
-  <div class="dialog-head"><h2>Ask Potbelly</h2><button class="icon-button" id="aiClose" type="button" aria-label="Close cooking assistant">×</button></div>
+  <div class="dialog-head"><h2 id="aiPanelTitle">Ask Potbelly</h2><button class="icon-button" id="aiClose" type="button" aria-label="Close cooking assistant">×</button></div>
   <div class="dialog-body">
     <section data-ai-stage="loading"><h3>Warming up…</h3><p>Checking assistant availability.</p></section>
     <section data-ai-stage="offline" hidden><h3>Assistant unavailable</h3><p>The assistant needs internet. The complete recipe remains available.</p></section>
-    <section data-ai-stage="consent" hidden><h3>Before you start</h3><p>Your question and this recipe's context will be sent to OpenAI. Voice mode also sends microphone audio after you explicitly start it.</p><p>Answers are not saved. AI can make mistakes; follow appliance safety instructions and use a food thermometer.</p><div class="dialog-actions"><button class="btn" id="acceptVoiceConsent" type="button">Accept and continue</button></div></section>
-    <section data-ai-stage="ready" hidden><h3 id="aiPanelTitle">Your recipe-aware sous-chef.</h3><p class="ai-step-context" id="aiStepContext">Ask about the current step, heat, texture, timing, or substitutions.</p><div class="quick-prompts" aria-label="Suggested questions"><button type="button" data-ai-prompt="What should I check before moving to the next step?">What should I check?</button><button type="button" data-ai-prompt="Explain the pressure release for this recipe.">Pressure release?</button><button type="button" data-ai-prompt="How do I know when this is cooked safely?">Is it cooked?</button></div><form class="typed-question" id="typedQuestionForm"><label for="typedQuestion">Type a question</label><div><input class="field" id="typedQuestion" maxlength="1000" placeholder="How hot should the pan be?" autocomplete="off"><button class="btn-secondary" type="submit">Ask</button></div></form><div class="ai-answer" id="aiAnswer" hidden aria-live="polite"></div><div class="ai-divider"><span>or talk hands-free</span></div><button class="btn-quiet" id="startVoiceSession" type="button">Start voice mode</button></section>
+    <section data-ai-stage="consent" hidden><h3>Before you start</h3><p>Your microphone audio and this recipe's context will be sent to OpenAI only after you press Start listening.</p><p>Audio and answers are not saved by Potbelly. AI can make mistakes; follow appliance safety instructions and use a food thermometer.</p><div class="dialog-actions"><button class="btn" id="acceptVoiceConsent" type="button">Accept and continue</button></div></section>
+    <section class="voice-ready" data-ai-stage="ready" hidden><div class="voice-ready-mark" aria-hidden="true"><span class="dock-mic"></span></div><h3>Your recipe-aware sous-chef.</h3><p class="ai-step-context" id="aiStepContext">Ask about the current step, heat, texture, timing, or substitutions.</p><div class="voice-examples" aria-label="Example questions"><span>Try asking</span><ul><li>“What should I check?”</li><li>“How hot should this be?”</li><li>“Is it cooked safely?”</li></ul></div><p class="voice-ready-status" id="voiceReadyStatus" aria-live="polite"></p><button class="btn-secondary voice-start" id="startVoiceSession" type="button">Start listening</button><p class="voice-privacy">Your microphone remains off until you press this button.</p></section>
     <section class="voice-shell" data-ai-stage="session" hidden>
       <div class="voice-orb" id="voiceOrb" data-state="ready" aria-hidden="true"></div><h3 class="voice-state" id="aiStateLabel">Ready</h3><p class="voice-detail" id="aiStateDetail">Ask a question about this recipe.</p>
       <div class="voice-controls"><button class="btn-quiet" id="muteVoice" type="button">Mute</button><button class="btn-quiet" id="interruptVoice" type="button">Stop answer</button><button class="btn-quiet btn-danger" id="endVoiceSession" type="button">End session</button></div>
@@ -428,7 +427,7 @@ def information_page(kind: str, site: str) -> str:
         "privacy": (
             "Privacy",
             "The cookbook stays on your iPad.",
-            """<p>Potbelly has no accounts, advertising, behavioural analytics or server-side recipe storage. Cooking progress and preferences remain in IndexedDB on this device.</p><p>The optional AI Cooking Assistant sends your typed question or, when you explicitly start voice mode, microphone audio together with the selected recipe context to OpenAI for a live response. Potbelly does not display, log or deliberately retain a transcript. The permanent OpenAI credential remains on Cloudflare.</p><p>You can use every recipe, search and Cooking Mode without enabling the AI feature.</p>""",
+            """<p>Potbelly has no accounts, advertising, behavioural analytics or server-side recipe storage. Cooking progress and preferences remain in IndexedDB on this device.</p><p>The optional AI Cooking Assistant sends microphone audio together with the selected recipe context to OpenAI only after you explicitly start listening. Potbelly does not display, log or deliberately retain a transcript. The permanent OpenAI credential remains on Cloudflare.</p><p>You can use every recipe, search and Cooking Mode without enabling the AI feature.</p>""",
         ),
         "support": (
             "Support",

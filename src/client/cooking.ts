@@ -106,15 +106,17 @@ export class CookingController extends EventTarget {
         this.progress.completedStepIds = this.progress.completedStepIds.filter((value) => value !== id);
         this.progress.activeStepId = id;
         this.changed(`Step ${this.stepNumber(id)} reopened.`);
-      } else this.markStepComplete(id);
+      } else if (this.stepNumber(id) === this.steps.length) void this.finishCooking(id);
+      else this.markStepComplete(id);
     }));
     requiredElement<HTMLButtonElement>("#startCooking").addEventListener("click", () => this.enterCookingMode());
     requiredElement<HTMLButtonElement>("#exitCooking").addEventListener("click", () => void this.exitCookingMode());
     requiredElement<HTMLButtonElement>("#previousStep").addEventListener("click", () => this.move(-1));
-    requiredElement<HTMLButtonElement>("#nextStep").addEventListener("click", () => this.move(1));
-    requiredElement<HTMLButtonElement>("#undoCooking").addEventListener("click", () => this.undo());
+    requiredElement<HTMLButtonElement>("#nextStep").addEventListener("click", () => this.moveForward());
+    requiredElement<HTMLButtonElement>("#undoCooking").addEventListener("click", () => { this.undo(); this.closeOverflow(); });
     requiredElement<HTMLButtonElement>("#showIngredients").addEventListener("click", () => document.body.classList.add("ingredients-open"));
     requiredElement<HTMLButtonElement>("#closeIngredients").addEventListener("click", () => document.body.classList.remove("ingredients-open"));
+    requiredElement<HTMLButtonElement>("#ingredientsBackdrop").addEventListener("click", () => document.body.classList.remove("ingredients-open"));
     requiredElement<HTMLButtonElement>("#textSize").addEventListener("click", () => void this.cycleTextSize());
     const dialog = requiredElement<HTMLDialogElement>("#resetDialog");
     requiredElement<HTMLButtonElement>("#resetCooking").addEventListener("click", () => dialog.showModal());
@@ -124,6 +126,7 @@ export class CookingController extends EventTarget {
       this.progress = this.emptyProgress();
       await resetProgress(this.recipeSlug);
       dialog.close();
+      this.closeOverflow();
       this.render();
       setLiveMessage("Cooking progress reset.");
     });
@@ -140,8 +143,12 @@ export class CookingController extends EventTarget {
   private async exitCookingMode(): Promise<void> {
     document.body.classList.remove("cooking-mode", "ingredients-open");
     requiredElement<HTMLElement>("#cookingDock").hidden = true;
+    this.closeOverflow();
     await this.wakeLock?.release();
     this.wakeLock = null;
+    const title = requiredElement<HTMLElement>("#recipeTitle");
+    title.scrollIntoView({ behavior: "smooth", block: "start" });
+    requiredElement<HTMLButtonElement>("#startCooking").focus({ preventScroll: true });
   }
 
   private async requestWakeLock(): Promise<void> {
@@ -154,6 +161,28 @@ export class CookingController extends EventTarget {
     const id = this.steps[next]?.dataset.stepId;
     if (id) this.setActiveStep(id);
     this.scrollToActive();
+  }
+
+  private moveForward(): void {
+    const activeIndex = this.steps.findIndex((step) => step.dataset.stepId === this.progress.activeStepId);
+    const activeId = this.steps[activeIndex]?.dataset.stepId;
+    if (activeIndex === this.steps.length - 1 && activeId) {
+      void this.finishCooking(activeId);
+      return;
+    }
+    this.move(1);
+  }
+
+  private async finishCooking(stepId: string): Promise<void> {
+    if (!this.progress.completedStepIds.includes(stepId)) this.markStepComplete(stepId);
+    await this.persistQueue;
+    await this.exitCookingMode();
+    setLiveMessage("Cooking complete. Back at the recipe.");
+  }
+
+  private closeOverflow(): void {
+    const overflow = document.querySelector<HTMLDetailsElement>(".dock-overflow");
+    if (overflow) overflow.open = false;
   }
 
   private addTimerActions(): void {
@@ -279,12 +308,20 @@ export class CookingController extends EventTarget {
       step.classList.toggle("is-complete", complete);
       const button = step.querySelector<HTMLButtonElement>("[data-complete-step]");
       button?.setAttribute("aria-pressed", String(complete));
-      if (button) button.textContent = complete ? "Reopen step" : "Done — next step";
+      if (button) {
+        const finalStep = this.stepNumber(id) === this.steps.length;
+        button.textContent = complete ? "Reopen step" : finalStep ? "Finish cooking" : "Done — next step";
+      }
     });
     const activeIndex = this.steps.findIndex((step) => step.dataset.stepId === this.progress.activeStepId);
     requiredElement<HTMLElement>("#cookingProgress").textContent = activeIndex >= 0 ? `Step ${activeIndex + 1} of ${this.steps.length}` : `${this.steps.length} steps`;
     requiredElement<HTMLButtonElement>("#previousStep").disabled = activeIndex <= 0;
-    requiredElement<HTMLButtonElement>("#nextStep").disabled = activeIndex === this.steps.length - 1;
+    const next = requiredElement<HTMLButtonElement>("#nextStep");
+    const finalStep = activeIndex === this.steps.length - 1;
+    next.disabled = activeIndex < 0;
+    next.classList.toggle("is-finish", finalStep);
+    next.setAttribute("aria-label", finalStep ? "Finish cooking" : "Next step");
+    requiredElement<HTMLElement>("#nextStepLabel").textContent = finalStep ? "Finish" : "Next";
     requiredElement<HTMLButtonElement>("#undoCooking").disabled = this.history.length === 0;
     this.renderCompletedHistory();
     this.renderTimers();

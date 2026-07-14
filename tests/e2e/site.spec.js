@@ -7,16 +7,14 @@ test("search supports natural intent and preserves stable routes", async ({ page
   const desktopBrand = await page.evaluate(() => ({
     mark: document.querySelector(".brand-mark").getBoundingClientRect().width,
     name: Number.parseFloat(getComputedStyle(document.querySelector(".brand-name")).fontSize),
+    tagline: Number.parseFloat(getComputedStyle(document.querySelector(".brand-tagline")).fontSize),
   }));
   expect(desktopBrand.mark).toBeCloseTo(76.8, 1);
   expect(desktopBrand.name).toBeCloseTo(38.4, 1);
-  const headerGap = await page.evaluate(() => {
-    const brand = document.querySelector(".brand").getBoundingClientRect();
-    const kicker = document.querySelector(".hero-kicker").getBoundingClientRect();
-    return Math.round(kicker.top - brand.bottom);
-  });
-  expect(headerGap).toBeGreaterThanOrEqual(54);
-  expect(headerGap).toBeLessThanOrEqual(58);
+  expect(desktopBrand.tagline).toBeCloseTo(16.2, 1);
+  await expect(page.getByText("A Curation of Instant Pot Recipes")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What are we making?" })).toBeVisible();
+  await expect(page.locator("#sortRecipes")).toHaveCount(0);
   const search = page.getByLabel("What do you want to cook?");
   await expect(search).toBeEnabled();
   await expect(page.locator("#listCount")).toHaveText("150 recipes");
@@ -43,7 +41,6 @@ test("search supports natural intent and preserves stable routes", async ({ page
   const fastCount = Number.parseInt(await page.locator("#listCount").textContent(), 10);
   expect(fastCount).toBeGreaterThan(0);
   expect(fastCount).toBeLessThan(150);
-  await page.locator("#sortRecipes").selectOption("fastest");
   await expect(page.locator("#results li:visible").first()).toBeVisible();
 });
 
@@ -95,20 +92,15 @@ test("mobile controls, keyboard focus, recipe, and PDF remain usable", async ({ 
   const mobileBrand = await page.evaluate(() => ({
     mark: document.querySelector(".brand-mark").getBoundingClientRect().width,
     name: Number.parseFloat(getComputedStyle(document.querySelector(".brand-name")).fontSize),
+    tagline: Number.parseFloat(getComputedStyle(document.querySelector(".brand-tagline")).fontSize),
     overflow: document.documentElement.scrollWidth > innerWidth,
   }));
-  expect(mobileBrand.mark).toBeCloseTo(76.8, 1);
-  expect(mobileBrand.name).toBeCloseTo(38.4, 1);
+  expect(mobileBrand.mark).toBeCloseTo(54, 1);
+  expect(mobileBrand.name).toBeCloseTo(29, 1);
+  expect(mobileBrand.tagline).toBeCloseTo(10.8, 1);
   expect(mobileBrand.overflow).toBeFalsy();
   await page.getByLabel("What do you want to cook?").focus();
   await expect(page.locator("#q")).toBeFocused();
-  const mobileHeaderGap = await page.evaluate(() => {
-    const brand = document.querySelector(".brand").getBoundingClientRect();
-    const kicker = document.querySelector(".hero-kicker").getBoundingClientRect();
-    return Math.round(kicker.top - brand.bottom);
-  });
-  expect(mobileHeaderGap).toBeGreaterThanOrEqual(32);
-  expect(mobileHeaderGap).toBeLessThanOrEqual(36);
   const box = await page.locator("#q").boundingBox();
   expect(box).not.toBeNull();
   expect(box.height).toBeGreaterThanOrEqual(44);
@@ -118,6 +110,19 @@ test("mobile controls, keyboard focus, recipe, and PDF remain usable", async ({ 
   const pdf = await page.request.get("/pdfs/instant-pot-butter-chicken.pdf");
   expect(pdf.ok()).toBeTruthy();
   expect(pdf.headers()["content-type"]).toContain("application/pdf");
+  await page.addInitScript(() => {
+    window.__sharedPdf = null;
+    Object.defineProperty(navigator, "canShare", { configurable: true, value: ({ files }) => files?.[0]?.type === "application/pdf" });
+    Object.defineProperty(navigator, "share", { configurable: true, value: async ({ files }) => {
+      window.__sharedPdf = { name: files[0].name, type: files[0].type };
+    } });
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Save PDF" }).click();
+  await expect.poll(() => page.evaluate(() => window.__sharedPdf)).toEqual({
+    name: "potbelly-instant-pot-butter-chicken.pdf", type: "application/pdf",
+  });
+  await expect(page).toHaveURL(/instant-pot-butter-chicken/);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
   expect(overflow).toBeFalsy();
 });
@@ -134,15 +139,27 @@ test("Cooking Mode focuses the active step, advances, persists, and supports kit
   const secondStep = page.locator("[data-step-id]").nth(1);
   await expect(firstStep).toBeVisible();
   await expect(secondStep).toBeHidden();
+  expect(await firstStep.evaluate((element) => getComputedStyle(element, "::before").content)).toBe('"1"');
   await firstStep.getByRole("button", { name: "Done — next step" }).click();
   await expect(secondStep).toBeVisible();
+  expect(await secondStep.evaluate((element) => getComputedStyle(element, "::before").content)).toBe('"2"');
   await secondStep.getByRole("button", { name: "Start 10 min timer" }).click();
   await expect(page.locator("#timerRail")).toContainText("10 min timer");
-  await page.getByRole("button", { name: "Text", exact: true }).click();
+  await page.getByRole("button", { name: "Text size", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-text-scale", "large");
   await page.getByRole("button", { name: "Ingredients", exact: true }).click();
   await expect(page.locator("body")).toHaveClass(/ingredients-open/);
-  await page.getByRole("button", { name: "Close ingredients" }).click();
+  await page.locator("#ingredientsBackdrop").click({ position: { x: 900, y: 300 } });
+  await expect(page.locator("body")).not.toHaveClass(/ingredients-open/);
+  const stepCount = await page.locator("[data-step-id]").count();
+  for (let index = 2; index < stepCount; index += 1) await page.locator("#nextStep").click();
+  const finalStep = page.locator("[data-step-id]").last();
+  await expect(finalStep).toBeVisible();
+  await expect(finalStep.getByRole("button", { name: "Finish cooking" })).toBeVisible();
+  await finalStep.getByRole("button", { name: "Finish cooking" }).click();
+  await expect(page.locator("#cookingDock")).toBeHidden();
+  await expect(page.locator("body")).not.toHaveClass(/cooking-mode/);
+  await expect(page.getByRole("button", { name: "Start cooking" })).toBeFocused();
   await page.reload();
   await expect(firstIngredient).toBeChecked();
   await expect(page.locator("[data-step-id]").first()).toHaveClass(/is-complete/);
@@ -162,7 +179,7 @@ test("recipe favourites, shopping, notes, and JSON backup remain local", async (
   await page.waitForTimeout(400);
   await page.reload();
   await expect(note).toHaveValue("Use the mild chilli next time.");
-  await page.getByRole("button", { name: "About and install Potbelly" }).click();
+  await page.getByRole("button", { name: "About, installation and local data" }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export Backup" }).click();
   expect((await download).suggestedFilename()).toMatch(/^potbelly-backup-.*\.json$/);
@@ -213,11 +230,14 @@ test("AI assistant explains offline availability without losing the recipe", asy
   await page.context().setOffline(false);
 });
 
-test("typed AI is independent and never requests microphone access", async ({ page }) => {
+test("voice AI requires an explicit start and exposes no typed input", async ({ page, browserName }) => {
   await page.addInitScript(() => {
     window.__micCalls = 0;
-    if (!navigator.mediaDevices) Object.defineProperty(navigator, "mediaDevices", { value: {} });
-    navigator.mediaDevices.getUserMedia = async () => { window.__micCalls += 1; throw new DOMException("blocked", "NotAllowedError"); };
+    if (!navigator.mediaDevices) Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {} });
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
+      configurable: true,
+      value: async () => { window.__micCalls += 1; throw new DOMException("blocked", "NotAllowedError"); },
+    });
   });
   await page.route("**/api/ai/status", (route) => route.fulfill({ json: { aiEnabled: true } }));
   await page.route("**/api/ai/realtime-session", (route) => route.fulfill({ json: {
@@ -228,10 +248,15 @@ test("typed AI is independent and never requests microphone access", async ({ pa
   await page.goto("/recipe/instant-pot-butter-chicken");
   await page.getByRole("button", { name: "Ask Potbelly" }).click();
   await page.getByRole("button", { name: "Accept and continue" }).click();
-  await page.getByLabel("Type a question").fill("What should I check?");
-  await page.getByRole("button", { name: "Ask", exact: true }).click();
-  await page.waitForTimeout(250);
+  await expect(page.locator("#typedQuestion")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Start listening" })).toBeVisible();
   expect(await page.evaluate(() => window.__micCalls)).toBe(0);
+  await page.getByRole("button", { name: "Start listening" }).click();
+  if (browserName === "chromium") {
+    await expect.poll(() => page.evaluate(() => window.__micCalls)).toBe(1);
+  } else {
+    await expect(page.getByRole("button", { name: "Connecting…" })).toBeDisabled();
+  }
 });
 
 test("missing routes render the branded 404", async ({ page }) => {

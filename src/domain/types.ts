@@ -72,7 +72,6 @@ export interface SearchRecipe {
 }
 
 export type DiscoveryFilter = "all" | "under-30" | "chicken" | "beef" | "vegetarian" | "soup" | "dessert" | "indian";
-export type DiscoverySort = "popular" | "fastest" | "alphabetical" | "favourites";
 
 export interface PotbellyBackupV1 {
   format: "potbelly-backup";
@@ -88,7 +87,7 @@ export interface PotbellyBackupV1 {
 }
 
 export interface RealtimeSessionRequest {
-  mode: "typed" | "voice";
+  mode: "voice";
   recipeSlug: string;
   anonymousDeviceId: string;
   activeStepId: string | null;

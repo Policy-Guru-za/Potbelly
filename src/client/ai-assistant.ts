@@ -1,4 +1,4 @@
-import { OpenAIRealtimeWebSocket, RealtimeAgent, RealtimeSession, tool } from "@openai/agents/realtime";
+import { RealtimeAgent, RealtimeSession, tool } from "@openai/agents/realtime";
 import type { RunToolApprovalItem } from "@openai/agents";
 import { z } from "zod";
 import { getDeviceId, getPreferences, updatePreferences } from "../services/db";
@@ -15,13 +15,11 @@ const sessionResponseSchema = z.object({
 
 interface AiStatus { aiEnabled: boolean; }
 interface ToolApprovalRequest { tool: { name: string }; approvalItem: RunToolApprovalItem; }
-type SessionMode = "typed" | "voice";
-
 export class AiAssistant {
   private session: RealtimeSession | null = null;
-  private mode: SessionMode | null = null;
   private sessionTimer = 0;
   private backgroundTimer = 0;
+  private returnFocus: HTMLElement | null = null;
 
   constructor(private readonly cooking: CookingController) {}
 
@@ -32,11 +30,6 @@ export class AiAssistant {
     requiredElement<HTMLButtonElement>("#muteVoice").addEventListener("click", () => this.toggleMute());
     requiredElement<HTMLButtonElement>("#interruptVoice").addEventListener("click", () => this.session?.interrupt());
     requiredElement<HTMLButtonElement>("#endVoiceSession").addEventListener("click", () => this.end("Voice mode ended."));
-    requiredElement<HTMLFormElement>("#typedQuestionForm").addEventListener("submit", (event) => void this.sendTyped(event));
-    document.querySelectorAll<HTMLButtonElement>("[data-ai-prompt]").forEach((button) => button.addEventListener("click", () => {
-      requiredElement<HTMLInputElement>("#typedQuestion").value = button.dataset.aiPrompt ?? "";
-      requiredElement<HTMLInputElement>("#typedQuestion").focus();
-    }));
     document.addEventListener("visibilitychange", () => this.handleVisibility());
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape" && !requiredElement<HTMLElement>("#aiDialog").hidden) this.close();
@@ -44,7 +37,8 @@ export class AiAssistant {
     this.cooking.addEventListener("progresschange", () => this.renderStepContext());
   }
 
-  async open(): Promise<void> {
+  async open(returnFocus?: HTMLElement): Promise<void> {
+    this.returnFocus = returnFocus ?? null;
     const panel = requiredElement<HTMLElement>("#aiDialog");
     panel.hidden = false;
     document.body.classList.add("ai-open");
@@ -71,21 +65,28 @@ export class AiAssistant {
   }
 
   private async showConsentOrReady(): Promise<void> {
-    this.showStage((await getPreferences()).cloudVoiceConsentVersion === CONSENT_VERSION ? "ready" : "consent");
+    const consented = (await getPreferences()).cloudVoiceConsentVersion === CONSENT_VERSION;
+    if (consented) {
+      requiredElement<HTMLElement>("#voiceReadyStatus").textContent = "";
+      requiredElement<HTMLButtonElement>("#startVoiceSession").textContent = "Start listening";
+    }
+    this.showStage(consented ? "ready" : "consent");
+    if (consented) requiredElement<HTMLButtonElement>("#startVoiceSession").focus();
   }
 
   private async acceptConsent(): Promise<void> {
     await updatePreferences({ cloudVoiceConsentVersion: CONSENT_VERSION });
     this.showStage("ready");
-    requiredElement<HTMLInputElement>("#typedQuestion").focus();
+    requiredElement<HTMLElement>("#voiceReadyStatus").textContent = "";
+    requiredElement<HTMLButtonElement>("#startVoiceSession").focus();
   }
 
-  private async requestConfig(mode: SessionMode): Promise<RealtimeSessionResponse> {
+  private async requestConfig(): Promise<RealtimeSessionResponse> {
     const state = this.cooking.getState();
     const response = await fetch("/api/ai/realtime-session", {
       method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        mode,
+        mode: "voice",
         recipeSlug: state.recipeSlug, anonymousDeviceId: await getDeviceId(), activeStepId: state.activeStepId,
         checkedIngredientIds: state.checkedIngredientIds, completedStepIds: state.completedStepIds,
       }),
@@ -97,12 +98,13 @@ export class AiAssistant {
   private async startVoice(): Promise<void> {
     const button = requiredElement<HTMLButtonElement>("#startVoiceSession");
     button.disabled = true;
+    button.textContent = "Connecting…";
+    requiredElement<HTMLElement>("#voiceReadyStatus").textContent = "";
     this.setState("Connecting", "Preparing hands-free voice mode…");
     this.endSessionOnly();
     try {
-      const config = await this.requestConfig("voice");
-      this.session = this.createSession(config, "voice");
-      this.mode = "voice";
+      const config = await this.requestConfig();
+      this.session = this.createSession(config);
       await this.session.connect({ apiKey: config.clientSecret, model: config.model });
       this.showStage("session");
       this.setState("Listening", "Ask a question about this recipe.");
@@ -110,42 +112,16 @@ export class AiAssistant {
     } catch (error) {
       this.endSessionOnly();
       const message = error instanceof DOMException && error.name === "NotAllowedError"
-        ? "Microphone access was not allowed. You can still type questions without it."
+        ? "Microphone access was not allowed. Enable it in iPad Settings for Safari or Potbelly, then try again."
         : "Voice mode could not start. Check your connection and try again.";
       this.setState("Voice unavailable", message);
       this.showStage("ready");
+      requiredElement<HTMLElement>("#voiceReadyStatus").textContent = message;
+      requiredElement<HTMLButtonElement>("#startVoiceSession").textContent = "Try again";
     } finally { button.disabled = false; }
   }
 
-  private async sendTyped(event: SubmitEvent): Promise<void> {
-    event.preventDefault();
-    const input = requiredElement<HTMLInputElement>("#typedQuestion");
-    const question = input.value.trim();
-    if (!question) return;
-    const answer = requiredElement<HTMLElement>("#aiAnswer");
-    answer.hidden = false;
-    answer.textContent = "Potbelly is thinking…";
-    input.disabled = true;
-    try {
-      if (!this.session || this.mode !== "typed") {
-        this.endSessionOnly();
-        const config = await this.requestConfig("typed");
-        this.session = this.createSession(config, "typed");
-        this.mode = "typed";
-        await this.session.connect({ apiKey: config.clientSecret, model: config.model });
-        this.armSessionLimit();
-      }
-      input.value = "";
-      this.session.sendMessage(question);
-      this.setState("Thinking", "Considering your question…");
-    } catch {
-      this.endSessionOnly();
-      answer.textContent = "I couldn’t connect just now. Your recipe and cooking progress are safe—please try again.";
-      this.setState("Connection lost", "Typed assistant unavailable.");
-    } finally { input.disabled = false; input.focus(); }
-  }
-
-  private createSession(config: RealtimeSessionResponse, mode: SessionMode): RealtimeSession {
+  private createSession(config: RealtimeSessionResponse): RealtimeSession {
     const idSchema = z.object({ id: z.string().min(1).max(80) });
     const agent = new RealtimeAgent({
       name: "Potbelly Cooking Assistant", instructions: config.instructions,
@@ -156,33 +132,18 @@ export class AiAssistant {
         tool({ name: "mark_ingredient_ready", description: "Mark an ingredient ready only after the user explicitly asks.", parameters: idSchema, needsApproval: true, execute: ({ id }) => this.cooking.markIngredientReady(id) }),
       ],
     });
-    const transport = mode === "typed" ? new OpenAIRealtimeWebSocket() : "webrtc";
     const session = new RealtimeSession(agent, {
-      model: config.model, transport, tracingDisabled: true, historyStoreAudio: false,
-      config: mode === "voice" ? {
+      model: config.model, transport: "webrtc", tracingDisabled: true, historyStoreAudio: false,
+      config: {
         outputModalities: ["audio"],
         audio: { input: { transcription: null, noiseReduction: { type: "near_field" }, turnDetection: { type: "semantic_vad", interruptResponse: true, eagerness: "auto" } }, output: { voice: config.voice } },
-      } : { outputModalities: ["text"] },
+      },
     });
     session.on("agent_start", () => this.setState("Thinking", "Considering your question…"));
-    session.on("agent_end", (_context, _agent, output) => {
-      if (mode !== "typed") return;
-      const answer = requiredElement<HTMLElement>("#aiAnswer");
-      answer.hidden = false;
-      answer.textContent = output || "I couldn’t form a useful answer. Try asking in a different way.";
-      this.setState("Ready", "Ask a follow-up whenever you like.");
-    });
     session.on("audio_start", () => this.setState("Speaking", "Potbelly is answering."));
     session.on("audio_stopped", () => this.setState("Listening", "Ask another question."));
     session.on("audio_interrupted", () => this.setState("Listening", "Answer stopped. Go ahead."));
-    session.on("error", () => {
-      if (mode === "typed") {
-        const answer = requiredElement<HTMLElement>("#aiAnswer");
-        answer.hidden = false;
-        answer.textContent = "The connection was interrupted. Please ask again.";
-      }
-      this.setState("Connection lost", mode === "voice" ? "The voice connection was interrupted." : "The typed connection was interrupted.");
-    });
+    session.on("error", () => this.setState("Connection lost", "The voice connection was interrupted."));
     session.on("tool_approval_requested", (_context, _agent, request) => {
       if (request.type === "function_approval") this.requestApproval(request);
     });
@@ -198,7 +159,7 @@ export class AiAssistant {
   }
 
   private toggleMute(): void {
-    if (!this.session || this.mode !== "voice") return;
+    if (!this.session) return;
     const muted = !(this.session.muted ?? false);
     this.session.mute(muted);
     requiredElement<HTMLButtonElement>("#muteVoice").textContent = muted ? "Unmute" : "Mute";
@@ -208,10 +169,8 @@ export class AiAssistant {
   private handleVisibility(): void {
     clearTimeout(this.backgroundTimer);
     if (document.visibilityState === "hidden" && this.session) {
-      if (this.mode === "voice") {
-        this.session.mute(true);
-        requiredElement<HTMLButtonElement>("#muteVoice").textContent = "Unmute";
-      }
+      this.session.mute(true);
+      requiredElement<HTMLButtonElement>("#muteVoice").textContent = "Unmute";
       this.backgroundTimer = window.setTimeout(() => this.end("Session ended while Potbelly was in the background."), 60_000);
     }
   }
@@ -233,7 +192,6 @@ export class AiAssistant {
     clearTimeout(this.backgroundTimer);
     this.session?.close();
     this.session = null;
-    this.mode = null;
     requiredElement<HTMLElement>("#aiApproval").hidden = true;
   }
 
@@ -241,17 +199,18 @@ export class AiAssistant {
     this.endSessionOnly();
     this.setState("Ready", message);
     this.showStage("ready");
+    requiredElement<HTMLButtonElement>("#startVoiceSession").textContent = "Start listening";
+    requiredElement<HTMLElement>("#voiceReadyStatus").textContent = message;
   }
 
   private close(): void {
     this.endSessionOnly();
-    const answer = requiredElement<HTMLElement>("#aiAnswer");
-    answer.textContent = "";
-    answer.hidden = true;
-    requiredElement<HTMLInputElement>("#typedQuestion").value = "";
+    requiredElement<HTMLButtonElement>("#startVoiceSession").textContent = "Start listening";
+    requiredElement<HTMLElement>("#voiceReadyStatus").textContent = "";
     requiredElement<HTMLElement>("#aiDialog").hidden = true;
     document.body.classList.remove("ai-open");
-    requiredElement<HTMLButtonElement>("#askPotbelly").focus();
+    (this.returnFocus ?? requiredElement<HTMLButtonElement>("#askPotbelly")).focus();
+    this.returnFocus = null;
   }
 
   private showStage(stage: string): void {

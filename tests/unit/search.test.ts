@@ -59,10 +59,10 @@ describe("offline recipe search", () => {
       .toBe("instant-pot-chicken-marsala");
   });
 
-  it("combines quick filters, sorting, and favourites without changing routes", () => {
+  it("combines quick filters with popularity ordering without changing routes", () => {
     const vegetarian = recipe({ slug: "dal", title: "Dal", normalizedCourse: "main", normalizedCuisine: "indian", vegetarian: true, durationMinutes: 20 });
-    expect(discoverRecipes([cake, chicken, vegetarian], "", "vegetarian", "fastest").map(({ slug }) => slug)).toEqual(["dal"]);
-    expect(discoverRecipes([cake, chicken], "", "all", "favourites", new Set(["chicken"])).map(({ slug }) => slug)).toEqual(["chicken"]);
+    expect(discoverRecipes([cake, chicken, vegetarian], "", "vegetarian").map(({ slug }) => slug)).toEqual(["dal"]);
+    expect(discoverRecipes([chicken, cake], "").map(({ slug }) => slug)).toEqual(["cake", "chicken"]);
   });
 
   it("keeps quick chicken intent focused on chicken rather than a supporting stock ingredient", () => {

@@ -35,23 +35,21 @@ class SiteGenerationTests(unittest.TestCase):
 
     def test_homepage_uses_personal_copy_without_search_chips(self):
         page = index_page([self.recipe], "https://potbelly.example")
-        self.assertIn("Laupie puts dinner under pressure.", page)
-        self.assertIn(
-            "Clear recipes, useful timings, and absolutely no waffle before dinner.",
-            page,
-        )
+        self.assertIn("A Curation of Instant Pot Recipes", page)
+        self.assertIn("What are we making?", page)
+        self.assertNotIn("Laupie puts dinner under pressure.", page)
         self.assertNotIn("Good food. No life story.", page)
         self.assertNotIn('class="chips"', page)
         self.assertNotIn("Weeknight chicken", page)
         self.assertNotIn('id="surprise"', page)
         self.assertIn("Try fewer words or a different ingredient.", page)
 
-    def test_homepage_has_standalone_dashboard_filters_and_master_detail(self):
+    def test_homepage_has_universal_dashboard_filters_and_master_detail(self):
         page = index_page([self.recipe], "https://potbelly.example")
         self.assertIn('id="dashboardTitle"', page)
         self.assertIn('id="continueCard"', page)
         self.assertIn('data-filter="under-30"', page)
-        self.assertIn('id="sortRecipes"', page)
+        self.assertNotIn('id="sortRecipes"', page)
         self.assertIn('id="recipePreview"', page)
         self.assertIn('id="showMore"', page)
         self.assertIn('id="shoppingDialog"', page)
@@ -69,13 +67,16 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertNotIn('data-ai-stage="unlock"', page)
         self.assertNotIn('id="aiAccessCode"', page)
         self.assertIn('data-step-id="step-1-1"', page)
-        self.assertIn("Done — next step", page)
+        self.assertIn('data-step-number="1"', page)
+        self.assertIn("Finish cooking", page)
         self.assertIn('id="timerRail"', page)
         self.assertIn('id="textSize"', page)
         self.assertIn('id="personalNote"', page)
         self.assertIn('id="favouriteRecipe"', page)
         self.assertIn('class="ai-panel"', page)
-        self.assertIn("Type a question", page)
+        self.assertIn("Start listening", page)
+        self.assertNotIn("Type a question", page)
+        self.assertIn('id="savePdf" type="button"', page)
 
     def test_pipeline_keywords_survive_search_index(self):
         value = search_record(self.recipe)
