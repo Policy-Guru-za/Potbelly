@@ -33,6 +33,29 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertIn('rel="icon" href="/icons/icon-192.png"', page)
         self.assertNotIn("Pressure cooking, beautifully clear.", page)
 
+    def test_homepage_has_branded_social_preview_metadata(self):
+        page = index_page([self.recipe], "https://potbelly.example")
+        title = "Potbelly — Pot Luck with Laupie"
+        description = (
+            "150 curated Instant Pot recipes with guided Cooking Mode and a "
+            "voice-powered AI cooking assistant."
+        )
+        image = "https://potbelly.example/social/potbelly-share.jpg"
+
+        self.assertIn(f"<title>{title}</title>", page)
+        self.assertIn(f'<meta name="description" content="{description}">', page)
+        self.assertIn(f'<meta property="og:title" content="{title}">', page)
+        self.assertIn(f'<meta property="og:description" content="{description}">', page)
+        self.assertIn(f'<meta property="og:image" content="{image}">', page)
+        self.assertIn('<meta property="og:image:type" content="image/jpeg">', page)
+        self.assertIn('<meta property="og:image:width" content="1200">', page)
+        self.assertIn('<meta property="og:image:height" content="630">', page)
+        self.assertIn('<meta name="twitter:card" content="summary_large_image">', page)
+        self.assertIn(f'<meta name="twitter:title" content="{title}">', page)
+        self.assertIn(f'<meta name="twitter:description" content="{description}">', page)
+        self.assertIn(f'<meta name="twitter:image" content="{image}">', page)
+        self.assertNotIn("the Instant Pot cookbook, typeset", page)
+
     def test_homepage_uses_personal_copy_without_search_chips(self):
         page = index_page([self.recipe], "https://potbelly.example")
         self.assertIn("A Curation of Instant Pot Recipes", page)

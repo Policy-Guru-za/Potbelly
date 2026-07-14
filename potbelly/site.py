@@ -84,6 +84,7 @@ def normalized_course(value: str) -> str:
 
 def head(*, title: str, description: str, canonical: str, site: str,
          structured_data: dict[str, Any] | None = None) -> str:
+    social_image = f"{site}/social/potbelly-share.jpg"
     json_ld = ""
     if structured_data:
         json_ld = (
@@ -107,7 +108,17 @@ def head(*, title: str, description: str, canonical: str, site: str,
 <meta property="og:description" content="{esc(description)}">
 <meta property="og:url" content="{esc(canonical)}">
 <meta property="og:site_name" content="Potbelly">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="{esc(social_image)}">
+<meta property="og:image:secure_url" content="{esc(social_image)}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Potbelly — Pot Luck with Laupie">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{esc(title)}">
+<meta name="twitter:description" content="{esc(description)}">
+<meta name="twitter:image" content="{esc(social_image)}">
+<meta name="twitter:image:alt" content="Potbelly — Pot Luck with Laupie">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="/assets/site.css">
 <link rel="icon" href="/icons/icon-192.png" type="image/png">
@@ -200,11 +211,11 @@ def index_page(recipes: list[dict[str, Any]], site: str) -> str:
             f'<span class="rmeta">{meta}</span></a></li>'
         )
     description = (
-        "Ask what you want to cook. Potbelly finds loved Instant Pot recipes, "
-        "stripped of the fluff and typeset for screen and PDF."
+        "150 curated Instant Pot recipes with guided Cooking Mode and a "
+        "voice-powered AI cooking assistant."
     )
     return head(
-        title="Potbelly — the Instant Pot cookbook, typeset",
+        title="Potbelly — Pot Luck with Laupie",
         description=description,
         canonical=site + "/",
         site=site,

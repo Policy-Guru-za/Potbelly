@@ -4,7 +4,7 @@
   "scope": "/",
   "name": "Potbelly",
   "short_name": "Potbelly",
-  "description": "A calm, curated Instant Pot cookbook with guided Cooking Mode.",
+  "description": "150 curated Instant Pot recipes with guided Cooking Mode and a voice-powered AI cooking assistant.",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#f6f0e4",

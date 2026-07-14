@@ -3,7 +3,15 @@ const AxeBuilder = require("@axe-core/playwright").default;
 
 test("search supports natural intent and preserves stable routes", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle(/Potbelly/);
+  await expect(page).toHaveTitle("Potbelly — Pot Luck with Laupie");
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    "content",
+    "http://127.0.0.1:4173/social/potbelly-share.jpg",
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    "content",
+    "summary_large_image",
+  );
   const desktopBrand = await page.evaluate(() => ({
     mark: document.querySelector(".brand-mark").getBoundingClientRect().width,
     name: Number.parseFloat(getComputedStyle(document.querySelector(".brand-name")).fontSize),
