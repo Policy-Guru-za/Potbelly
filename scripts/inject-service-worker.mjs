@@ -5,7 +5,10 @@ const result = await injectManifest({
   swDest: "dist/sw.js",
   globDirectory: "dist",
   globPatterns: ["**/*.{html,js,css,json,webmanifest,svg,png,ttf}"],
-  globIgnores: ["sw.js", "pdfs/**", "build-report.json"],
+  globIgnores: [
+    "sw.js", "pdfs/**", "build-report.json",
+    "assets/chunks/ai-assistant-*.js", "assets/chunks/agent-*.js",
+  ],
   maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
 });
 

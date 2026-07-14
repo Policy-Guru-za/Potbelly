@@ -1,4 +1,4 @@
-import type { SearchRecipe } from "../domain/types";
+import type { DiscoveryFilter, DiscoverySort, SearchRecipe } from "../domain/types";
 
 const STOP_WORDS = new Set(["a", "an", "and", "for", "of", "please", "the", "to", "with"]);
 const NUMBER_WORDS = new Map([
@@ -11,6 +11,7 @@ const ALIASES = new Map([
   ["veggie", ["vegetable", "vegetarian"]],
   ["minute", ["min"]],
   ["minutes", ["min"]],
+  ["quick", ["weeknight", "fast"]],
 ]);
 
 interface SearchField {
@@ -54,12 +55,27 @@ function fieldScore(recipe: SearchRecipe, token: string): number {
     { value: recipe.course, exactWeight: 42 },
     { value: recipe.cuisine, exactWeight: 36 },
     { value: recipe.keywords, exactWeight: 34 },
-    { value: recipe.ingredients, exactWeight: 18 },
+    { value: recipe.primaryIngredients, exactWeight: 55 },
+    { value: recipe.ingredients, exactWeight: 12 },
     { value: recipe.servings, exactWeight: 14 },
     { value: recipe.time, exactWeight: 8 },
   ];
   return candidates.reduce((best, candidate) => fields.reduce((score, field) =>
     Math.max(score, tokenMatchScore(field.value, candidate, field.exactWeight)), best), 0);
+}
+
+function intentBonus(recipe: SearchRecipe, queryTokens: string[]): number {
+  let score = 0;
+  if (queryTokens.includes("quick") && recipe.durationMinutes !== null) {
+    if (recipe.durationMinutes <= 30) score += 360;
+    else if (recipe.durationMinutes <= 45) score += 160;
+    else score -= 240;
+  }
+  const titleTokens = tokenize(`${recipe.title} ${recipe.category} ${recipe.primaryIngredients}`);
+  for (const token of queryTokens) {
+    if (["chicken", "beef", "pork", "lamb", "fish", "shrimp"].includes(token) && titleTokens.includes(token)) score += 240;
+  }
+  return score;
 }
 
 function titleBonus(recipe: SearchRecipe, queryTokens: string[]): number {
@@ -78,8 +94,30 @@ function rankRecipe(recipe: SearchRecipe, queryTokens: string[]): RankedRecipe |
   if (tokenScores.some((score) => score === 0)) return null;
   return {
     recipe,
-    score: titleBonus(recipe, queryTokens) + tokenScores.reduce((sum, score) => sum + score, 0),
+    score: titleBonus(recipe, queryTokens) + intentBonus(recipe, queryTokens)
+      + tokenScores.reduce((sum, score) => sum + score, 0),
   };
+}
+
+function matchesFilter(recipe: SearchRecipe, filter: DiscoveryFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "under-30") return recipe.durationMinutes !== null && recipe.durationMinutes <= 30;
+  if (filter === "vegetarian") return recipe.vegetarian;
+  if (filter === "soup" || filter === "dessert") return recipe.normalizedCourse === filter;
+  if (filter === "indian") return recipe.normalizedCuisine === "indian";
+  return tokenize(`${recipe.title} ${recipe.category} ${recipe.primaryIngredients}`).includes(filter);
+}
+
+export function discoverRecipes(
+  recipes: SearchRecipe[], query: string, filter: DiscoveryFilter = "all",
+  sort: DiscoverySort = "popular", favouriteSlugs: ReadonlySet<string> = new Set(),
+): SearchRecipe[] {
+  let visible = searchRecipes(recipes, query).filter((recipe) => matchesFilter(recipe, filter));
+  if (sort === "favourites") visible = visible.filter((recipe) => favouriteSlugs.has(recipe.slug));
+  if (sort === "fastest") visible.sort((left, right) => (left.durationMinutes ?? Number.MAX_SAFE_INTEGER)
+    - (right.durationMinutes ?? Number.MAX_SAFE_INTEGER) || right.popularity - left.popularity);
+  if (sort === "alphabetical") visible.sort((left, right) => left.title.localeCompare(right.title, "en"));
+  return visible;
 }
 
 export function searchRecipes(recipes: SearchRecipe[], query: string): SearchRecipe[] {

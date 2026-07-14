@@ -1,7 +1,7 @@
 import json
 import unittest
 
-from potbelly.site import human_duration_to_iso, index_page, recipe_page, safe_json, search_record
+from potbelly.site import duration_minutes, human_duration_to_iso, index_page, normalized_course, recipe_page, safe_json, search_record
 from tests.test_model import recipe
 from potbelly.model import normalize_recipe
 
@@ -46,6 +46,18 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertNotIn('id="surprise"', page)
         self.assertIn("Try fewer words or a different ingredient.", page)
 
+    def test_homepage_has_standalone_dashboard_filters_and_master_detail(self):
+        page = index_page([self.recipe], "https://potbelly.example")
+        self.assertIn('id="dashboardTitle"', page)
+        self.assertIn('id="continueCard"', page)
+        self.assertIn('data-filter="under-30"', page)
+        self.assertIn('id="sortRecipes"', page)
+        self.assertIn('id="recipePreview"', page)
+        self.assertIn('id="showMore"', page)
+        self.assertIn('id="shoppingDialog"', page)
+        self.assertIn("Export Backup", page)
+        self.assertIn("Import Backup", page)
+
     def test_recipe_page_contains_canonical_and_recipe_json_ld(self):
         page = recipe_page(self.recipe, "https://potbelly.example")
         self.assertIn('rel="canonical" href="https://potbelly.example/recipe/instant-pot-stew"', page)
@@ -57,11 +69,26 @@ class SiteGenerationTests(unittest.TestCase):
         self.assertNotIn('data-ai-stage="unlock"', page)
         self.assertNotIn('id="aiAccessCode"', page)
         self.assertIn('data-step-id="step-1-1"', page)
+        self.assertIn("Done — next step", page)
+        self.assertIn('id="timerRail"', page)
+        self.assertIn('id="textSize"', page)
+        self.assertIn('id="personalNote"', page)
+        self.assertIn('id="favouriteRecipe"', page)
+        self.assertIn('class="ai-panel"', page)
+        self.assertIn("Type a question", page)
 
     def test_pipeline_keywords_survive_search_index(self):
         value = search_record(self.recipe)
         self.assertEqual(value["keywords"], "stew dinner")
         json.dumps(value)
+
+    def test_search_index_has_normalized_discovery_metadata(self):
+        value = search_record(self.recipe)
+        self.assertEqual(duration_minutes("1 hr 40 min"), 100)
+        self.assertEqual(normalized_course("Main Course"), "main")
+        self.assertEqual(value["normalizedCourse"], "main")
+        self.assertIn("durationMinutes", value)
+        self.assertIn("primaryIngredients", value)
 
 
 if __name__ == "__main__":

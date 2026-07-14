@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
-import worker from "../src/index";
+import worker, { realtimeSchema } from "../src/index";
 
 const bindings = env;
 
@@ -16,6 +16,17 @@ describe("RateLimiter Durable Object", () => {
 });
 
 describe("Worker boundary", () => {
+  it("accepts explicit typed and voice modes and rejects ambiguous sessions", () => {
+    const request = {
+      recipeSlug: "instant-pot-butter-chicken", anonymousDeviceId: crypto.randomUUID(),
+      activeStepId: null, checkedIngredientIds: [], completedStepIds: [],
+    };
+    expect(realtimeSchema.safeParse({ ...request, mode: "typed" }).success).toBe(true);
+    expect(realtimeSchema.safeParse({ ...request, mode: "voice" }).success).toBe(true);
+    expect(realtimeSchema.safeParse(request).success).toBe(false);
+    expect(realtimeSchema.safeParse({ ...request, mode: "automatic" }).success).toBe(false);
+  });
+
   it("returns a no-store health response without exposing secrets", async () => {
     const result = await worker.fetch(new Request("https://potbelly.test/api/health"), bindings);
     expect(result.status).toBe(200);

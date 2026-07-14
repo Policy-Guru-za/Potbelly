@@ -6,7 +6,8 @@ import { privacyHash } from "./security";
 
 export { RateLimiter };
 
-const realtimeSchema = z.object({
+export const realtimeSchema = z.object({
+  mode: z.enum(["typed", "voice"]),
   recipeSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u),
   anonymousDeviceId: z.uuid(),
   activeStepId: z.string().max(80).nullable(),
@@ -58,20 +59,28 @@ async function realtimeSession(request: Request, env: Env): Promise<Response> {
 
   const instructions = buildInstructions(recipe, parsed.data.activeStepId);
   const client = new OpenAI({ apiKey: env.OPENAI_API_KEY, maxRetries: 1, timeout: 15_000 });
+  const session = parsed.data.mode === "voice" ? {
+    type: "realtime" as const,
+    model: env.OPENAI_REALTIME_MODEL,
+    instructions,
+    output_modalities: ["audio" as const],
+    max_output_tokens: 900,
+    tracing: null,
+    audio: {
+      input: { noise_reduction: { type: "near_field" as const }, turn_detection: { type: "semantic_vad" as const, create_response: true, interrupt_response: true, eagerness: "auto" as const } },
+      output: { voice: env.OPENAI_REALTIME_VOICE, speed: 1 },
+    },
+  } : {
+    type: "realtime" as const,
+    model: env.OPENAI_REALTIME_MODEL,
+    instructions,
+    output_modalities: ["text" as const],
+    max_output_tokens: 900,
+    tracing: null,
+  };
   const secret = await client.realtime.clientSecrets.create({
     expires_after: { anchor: "created_at", seconds: 60 },
-    session: {
-      type: "realtime",
-      model: env.OPENAI_REALTIME_MODEL,
-      instructions,
-      output_modalities: ["audio"],
-      max_output_tokens: 900,
-      tracing: null,
-      audio: {
-        input: { noise_reduction: { type: "near_field" }, turn_detection: { type: "semantic_vad", create_response: true, interrupt_response: true, eagerness: "auto" } },
-        output: { voice: env.OPENAI_REALTIME_VOICE, speed: 1 },
-      },
-    },
+    session,
   }, { headers: { "OpenAI-Safety-Identifier": deviceKey } });
   return response({
     clientSecret: secret.value,

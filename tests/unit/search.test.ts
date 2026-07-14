@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { SearchRecipe } from "../../src/domain/types";
-import { normalizeSearchText, searchRecipes, tokenize } from "../../src/client/search";
+import { discoverRecipes, normalizeSearchText, searchRecipes, tokenize } from "../../src/client/search";
 
 function recipe(overrides: Partial<SearchRecipe>): SearchRecipe {
   return {
     slug: "recipe", title: "Recipe", category: "Mains", course: "Main Course",
     cuisine: "American", servings: "4", time: "30 min", ingredients: "stock",
-    keywords: "weeknight", popularity: 1, ...overrides,
+    durationMinutes: 30, description: "A useful recipe.", sourceName: "Test Kitchen",
+    primaryIngredients: "stock", normalizedCourse: "main", normalizedCuisine: "american",
+    vegetarian: false, keywords: "weeknight", popularity: 1, ...overrides,
   };
 }
 
@@ -55,5 +57,15 @@ describe("offline recipe search", () => {
       .toBe("instant-pot-chicken-marsala");
     expect(searchRecipes([cake, marsala], "ITALIAN, mushrooms")[0]?.slug)
       .toBe("instant-pot-chicken-marsala");
+  });
+
+  it("combines quick filters, sorting, and favourites without changing routes", () => {
+    const vegetarian = recipe({ slug: "dal", title: "Dal", normalizedCourse: "main", normalizedCuisine: "indian", vegetarian: true, durationMinutes: 20 });
+    expect(discoverRecipes([cake, chicken, vegetarian], "", "vegetarian", "fastest").map(({ slug }) => slug)).toEqual(["dal"]);
+    expect(discoverRecipes([cake, chicken], "", "all", "favourites", new Set(["chicken"])).map(({ slug }) => slug)).toEqual(["chicken"]);
+  });
+
+  it("keeps quick chicken intent focused on chicken rather than a supporting stock ingredient", () => {
+    expect(discoverRecipes([ingredientOnly, chicken], "quick chicken dinner")[0]?.slug).toBe("chicken");
   });
 });
