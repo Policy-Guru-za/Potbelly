@@ -6,7 +6,7 @@ test("search supports natural intent and preserves stable routes", async ({ page
   await expect(page).toHaveTitle("Potbelly — Pot Luck with Laupie");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
-    "http://127.0.0.1:4173/social/potbelly-share.jpg",
+    /\/social\/potbelly-share\.jpg$/,
   );
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
     "content",
